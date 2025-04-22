@@ -1,0 +1,13 @@
+[
+  {
+    "type": "spe",
+    "nom": "100000000",
+    "test_type": "val_min",
+    "col1": "Température Moyenne",
+    "col2": "",
+    "val1": 11111111110.0,
+    "val2": null,
+    "lire_min": true,
+    "lire_max": true
+  }
+]

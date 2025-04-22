@@ -1,0 +1,11 @@
+[
+  {
+    "type": "spe",
+    "nom": "cccccccc",
+    "test_type": "compare_fix",
+    "col1": "Sonde 1",
+    "col2": "Consigne Temp",
+    "val1": 10.0,
+    "val2": null
+  }
+]
