@@ -18,7 +18,8 @@ class ExcelTesterApp(tk.Frame):
         self.controller = controller
         super().__init__(parent)
         self.Parent = parent
-
+        
+        
         self.fichier_path = None
         self.tests = []
         self.df = None
@@ -46,7 +47,9 @@ class ExcelTesterApp(tk.Frame):
         # print(self.Parent.winfo_width())
         # self.canvas.config(width=1000)  # Définir une largeur fixe (par exemple 400 pixels)
 
+        self._active_mouse_scroll_target = None
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
 
         # === Création des frames dans la scrollable_frame ===
         self.file_frame = self.create_file_frame()  # Assurez-vous que cela retourne un cadre
@@ -63,8 +66,36 @@ class ExcelTesterApp(tk.Frame):
         self.excel_preview_frame.pack(fill='both', expand=True, padx=10, pady=5)
         self.results_frame.pack(fill='both', expand=True, padx=10, pady=5)
         self.error_details_frame.pack(fill='both', expand=True, padx=10, pady=5)
-
         
+        
+        self.register_scrollable_widgets()
+        
+        self._bind_mousewheel_to_widget(self.test_listbox)
+        self._bind_mousewheel_to_widget(self.result_text)
+        self._bind_mousewheel_to_widget(self.table)
+        self._bind_mousewheel_to_widget(self.erreur_table)
+        
+        
+
+
+
+
+    
+    def register_scrollable_widgets(self):
+        scrollables = [
+            self.test_listbox,
+            self.result_text,
+            self.table,
+            self.erreur_table,
+        ]
+    
+        for widget in scrollables:
+                self._bind_mousewheel_to_widget(widget)
+                
+    def _disable_scroll_on_combo(self, widget):
+        widget.bind("<Enter>", lambda e: self.canvas.unbind_all("<MouseWheel>"))
+        widget.bind("<Leave>", lambda e: self.canvas.bind_all("<MouseWheel>", self._on_mousewheel))
+    
 
     def _bind_mousewheel_to_widget(self, widget):
         widget.bind("<Enter>", lambda e: self._set_active_scroll_target(widget))
@@ -74,12 +105,13 @@ class ExcelTesterApp(tk.Frame):
         self._active_mouse_scroll_target = widget
     
     def _on_mousewheel(self, event):
-        if hasattr(self, "_active_mouse_scroll_target") and self._active_mouse_scroll_target:
-            target = self._active_mouse_scroll_target
-            if isinstance(target, tk.Text) or isinstance(target, ttk.Treeview):
-                target.yview_scroll(int(-1*(event.delta/120)), "units")
+        target = getattr(self, "_active_mouse_scroll_target", None)
+    
+        if isinstance(target, (tk.Text, tk.Listbox, ttk.Treeview)):
+            target.yview_scroll(int(-1 * (event.delta / 120)), "units")
         else:
-            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
             
             
             
@@ -167,7 +199,7 @@ class ExcelTesterApp(tk.Frame):
         for i in range(50):
             self.table.insert("", "end", values=[f"Série {i}"] + [f"Valeur {j}" for j in range(14)])
     
-        self._bind_mousewheel_to_widget(self.table)
+
 
         return self.excel_preview_frame
 
@@ -191,7 +223,6 @@ class ExcelTesterApp(tk.Frame):
         result_scroll_x.pack(side="bottom", fill="x")
 
         self.result_text.configure(yscrollcommand=result_scroll_y.set, xscrollcommand=result_scroll_x.set)
-        self._bind_mousewheel_to_widget(self.result_text)
         return self.results_frame
 
 
@@ -214,7 +245,6 @@ class ExcelTesterApp(tk.Frame):
         self.erreur_table.configure(yscrollcommand=err_scroll_y.set, xscrollcommand=err_scroll_x.set)
         return self.error_details_frame
 
-        self._bind_mousewheel_to_widget(self.erreur_table)
 
         # texte.config(state="disabled")
     def ouvrir_aide(self):

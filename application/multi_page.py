@@ -14,20 +14,48 @@ class MultiPageApp(tk.Tk):
         self.configure(bg="#f4f4f4")
         print(self.winfo_width())
         # Apparence
+        # 🎨 Couleurs harmonisées
+        BLEU_PROFOND = "#005f73"
+        VERT_EAU = "#0a9396"
+        VERT_CLAIR = "#94d2bd"
+        FOND_CLAIR = "#e0fbfc"
+        TEXTE_BLEU = "#0077b6"
+        TEXTE_FOND = "#f4f4f4"
+        
+        # Apparence
         style = ttk.Style()
         style.theme_use('clam')
         font_default = ('Segoe UI', 10)
-
-        style.configure(".", font=font_default)
-        style.configure("TButton", font=font_default, padding=6, relief="flat",
-                        background="#005f73", foreground="white")
-        style.map("TButton", background=[('active', '#0a9396'), ('disabled', '#cccccc')])
-        style.configure("Treeview", font=font_default, rowheight=24,
-                        background='white', foreground='black', fieldbackground='white')
-        style.configure("Treeview.Heading", font=('Segoe UI', 10, 'bold'),
-                        background="#94d2bd", foreground="black")
-        style.configure("TLabel", background="#f4f4f4", font=font_default)
-
+        
+        # Style global
+        style.configure(".", font=font_default, background=FOND_CLAIR)
+        
+        # Boutons
+        style.configure("TButton",
+            font=font_default,
+            padding=6,
+            relief="flat",
+            background=BLEU_PROFOND,
+            foreground="white")
+        style.map("TButton",
+            background=[('active', VERT_EAU), ('disabled', '#cccccc')],
+            foreground=[('pressed', 'white'), ('active', 'white')])
+        
+        # Tableaux
+        style.configure("Treeview",
+            font=font_default,
+            rowheight=24,
+            background="white",
+            fieldbackground="white",
+            foreground="black")
+        style.configure("Treeview.Heading",
+            font=('Segoe UI', 10, 'bold'),
+            background=VERT_CLAIR,
+            foreground="black")
+        
+        # Labels
+        style.configure("TLabel", background=FOND_CLAIR, font=font_default)
+        self.configure(bg=FOND_CLAIR)
         # Navigation
         nav_frame = tk.Frame(self, bg="#e0e0e0", pady=5)
         nav_frame.pack(side="top", fill="x")
@@ -91,9 +119,15 @@ class MultiPageApp(tk.Tk):
 
     def exec_with_loading(self, func):
         # Afficher le label de chargement
-        self.loading_label = tk.Label(self.container, text="⏳ Chargement...", bg="#fff0c1", font=("Segoe UI", 12, "bold"))
+        self.loading_label = tk.Label(
+            self.container,
+            text="⏳ Chargement en cours, veuillez patienter...",
+            font=("Segoe UI", 11, "italic"),
+            fg="#0066cc",     # bleu doux
+            bg="#f4f4f4",     # fond cohérent
+        )
         self.loading_label.pack(pady=10)
-    
+                 
         def task():
             try:
                 func()
@@ -106,10 +140,15 @@ class MultiPageApp(tk.Tk):
         threading.Thread(target=task, daemon=True).start()
 
 
+
         
     def bind_button(self, action):
         """Associe une fonction à exécuter via le contrôleur avec animation de chargement."""
         return lambda: self.exec_with_loading(action)
+    
+    
+ 
+        
 
 
 if __name__ == "__main__":
