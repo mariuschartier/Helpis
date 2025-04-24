@@ -208,10 +208,7 @@ class ExcelTesterApp(tk.Frame):
                 messagebox.showerror("Erreur", "Le nombre de colonnes secondaires doit être inférieur à la taille de l'entête.")
                 return
         
-            if not (valeurs["entete_debut"] <= valeurs["ligne_unite"] <= valeurs["entete_fin"]):
-                messagebox.showerror("Erreur", "La ligne d'unité doit être comprise dans l'entête.")
-                return
-        
+    
             # Appliquer les valeurs
             self.taille_entete_entry.delete(0, tk.END)
             self.taille_entete_entry.insert(0, str(taille_entete))
@@ -548,67 +545,108 @@ class ExcelTesterApp(tk.Frame):
             tk.Label(popup, text=f"{champ} : {valeur}").pack(anchor="w", padx=20)
 
 
-
     def popup_ajouter_test_gen(self):
         popup = tk.Toplevel(self)
         popup.title("Ajouter un test générique")
-
+    
         tk.Label(popup, text="Nom du test :").grid(row=0, column=0, sticky="w")
         nom_entry = tk.Entry(popup, width=30)
         nom_entry.grid(row=0, column=1)
-
+    
         tk.Label(popup, text="Critères (séparés par des virgules) :").grid(row=1, column=0, sticky="w")
         critere_entry = tk.Entry(popup, width=40)
         critere_entry.grid(row=1, column=1)
-
+    
         tk.Label(popup, text="Type de test :").grid(row=2, column=0, sticky="w")
         type_test = ttk.Combobox(popup, values=["val_min", "val_max", "val_entre"], state="readonly")
         type_test.grid(row=2, column=1)
         type_test.set("val_entre")
-
+    
         tk.Label(popup, text="Valeur minimum :").grid(row=3, column=0, sticky="w")
         val_min_entry = tk.Entry(popup)
         val_min_entry.grid(row=3, column=1)
-
+    
         tk.Label(popup, text="Valeur maximum :").grid(row=4, column=0, sticky="w")
         val_max_entry = tk.Entry(popup)
         val_max_entry.grid(row=4, column=1)
-
+    
         def ajouter():
             nom = nom_entry.get().strip()
             criteres = [c.strip() for c in critere_entry.get().split(",") if c.strip()]
             type_selected = type_test.get()
+    
+            if not nom or not criteres:
+                messagebox.showerror("Erreur", "Nom et critères requis.")
+                return
+    
             try:
                 val_min = float(val_min_entry.get()) if val_min_entry.get() else None
                 val_max = float(val_max_entry.get()) if val_max_entry.get() else None
             except ValueError:
-                messagebox.showerror("Erreur", "Valeurs numériques invalides")
+                messagebox.showerror("Erreur", "Les valeurs numériques sont invalides.")
                 return
-
-            if not nom or not criteres:
-                messagebox.showerror("Erreur", "Nom et critères requis")
+    
+            if type_selected == "val_entre" and (val_min is None or val_max is None):
+                messagebox.showerror("Erreur", "Les deux valeurs min et max sont requises pour un test 'val_entre'.")
                 return
-
+            if type_selected == "val_min" and val_min is None:
+                messagebox.showerror("Erreur", "Valeur minimale requise.")
+                return
+            if type_selected == "val_max" and val_max is None:
+                messagebox.showerror("Erreur", "Valeur maximale requise.")
+                return
+    
             test = Test_gen(nom=nom, critere=criteres)
             self.tests.append((test, type_selected, val_min, val_max))
             self.test_listbox.insert(tk.END, f"[GEN] {nom} ({type_selected})")
             popup.destroy()
-
+    
         tk.Button(popup, text="Ajouter le test", command=ajouter).grid(row=5, column=1, pady=10)
+    
 
-
-    def popup_ajouter_test_spe(self):
+    def get_unique_columns(self):
+        """Retourne les noms des colonnes uniques basés sur la DataFrame."""
+        if self.df is None:
+            return []
         
-        # Supprimer les doublons tout en conservant l'ordre
-        colonnes_uniques = []
-        seen = set()
-        for col in self.colonnes_disponibles:
-            if col not in seen:
-                colonnes_uniques.append(col)
-                seen.add(col)
-                
-                
-                
+        try:
+            # Récupérer la taille de l'en-tête comme entier
+            taille_entete = int(self.taille_entete_entry.get())
+            # Vérifiez si la taille d'en-tête est valide par rapport à la taille du DataFrame
+            if taille_entete <= 0 or taille_entete > len(self.df):
+                raise ValueError("La taille de l'en-tête doit être positive et inférieure à la taille du DataFrame.")
+            
+            # Prenez les lignes pour l'en-tête
+            header_rows = self.df.iloc[:taille_entete]
+            
+            # Combinez les valeurs de toutes les lignes d'en-tête dans une seule série pour avoir des colonnes uniques
+            header = header_rows.astype(str).apply(lambda x: ' '.join(x), axis=0)
+    
+            return header.dropna().unique().tolist()
+        except ValueError as e:
+            messagebox.showerror("Erreur", str(e))
+            return []
+    
+    def get_sub_columns(self, selected_column):
+        """Retourne les sous-colonnes associées à la colonne sélectionnée."""
+        if self.df is None:
+            return []
+        
+        # Trouvez l'index de la colonne sélectionnée
+        column_index = self.df.columns.get_loc(selected_column)
+        
+        # Supposons que les sous-colonnes se trouvent sur les lignes suivantes
+        # Vous pouvez ajuster les index en fonction de votre structure de DataFrame
+        sub_columns = self.df.iloc[1:, column_index]
+        
+        # On enlève les valeurs nulles et les doublons
+        return sub_columns.dropna().unique().tolist()
+    
+    
+    
+    def popup_ajouter_test_spe(self):
+        colonnes_uniques = self.get_unique_columns()
+    
         popup = tk.Toplevel(self)
         popup.title("Ajouter un test spécifique")
     
@@ -616,71 +654,43 @@ class ExcelTesterApp(tk.Frame):
         nom_entry = tk.Entry(popup, width=30)
         nom_entry.grid(row=0, column=1)
     
-        tk.Label(popup, text="Type de test :").grid(row=1, column=0, sticky="w")
-        type_test = ttk.Combobox(popup, values=["val_min", "val_max", "val_entre", "compare_fix", "compare_ratio"], state="readonly")
-        type_test.grid(row=1, column=1)
-        type_test.set("val_min")
-    
-        tk.Label(popup, text="Colonne 1 :").grid(row=2, column=0, sticky="w")
+        tk.Label(popup, text="Colonne principale :").grid(row=1, column=0, sticky="w")
         col1_combo = ttk.Combobox(popup, values=colonnes_uniques, state="readonly")
-        col1_combo.grid(row=2, column=1)
+        col1_combo.grid(row=1, column=1)
+        
+        # ComboBox pour les sous-colonnes
+        col2_combo = ttk.Combobox(popup, state="readonly")
+        col2_combo.grid(row=2, column=1)
+        col2_combo.grid_remove()  # Masquer au départ
     
-
-
-        tk.Label(popup, text="Colonne 2 (si comparaison) :").grid(row=3, column=0, sticky="w")
-        col2_combo = ttk.Combobox(popup, values=colonnes_uniques, state="readonly")
-        col2_combo.grid(row=3, column=1)
-
+        def update_sub_columns(selected_column):
+            """Métode pour mettre à jour les sous-colonnes."""
+            # Suppose que les noms de colonnes sont séparés par une virgule
+            columns = [col.strip() for col in selected_column.split(',')]  # Nettoyer les espaces
+        
+            # Assurez-vous que nous - prenons seulement les colonnes valides
+            valid_sub_columns = []
+            for col in columns:
+                if col in self.df.columns:  # Vérifiez si le nom de colonne est valide
+                    sub_columns = self.get_sub_columns(col)
+                    if sub_columns:
+                        valid_sub_columns.extend(sub_columns)
+        
+            # Retirer les doublons
+            valid_sub_columns = list(set(valid_sub_columns))
+        
+            if valid_sub_columns:  # Il y a des sous-colonnes à afficher
+                col2_combo['values'] = valid_sub_columns
+                col2_combo.set('')  # Réinitialiser la sélection
+                col2_combo.grid()  # Afficher la combo box pour les sous-colonnes
+            else:  # Pas de sous-colonnes, cacher la ComboBox
+                col2_combo.grid_remove()
     
-        # Champs classiques
-        tk.Label(popup, text="Valeur min / différence / ratio :").grid(row=4, column=0, sticky="w")
-        val1_entry = tk.Entry(popup)
-        val1_entry.grid(row=4, column=1)
+        col1_combo.bind("<<ComboboxSelected>>", lambda e: update_sub_columns(col1_combo.get()))  # Met à jour les sous-colonnes
     
-        tk.Label(popup, text="Valeur max (si besoin) :").grid(row=5, column=0, sticky="w")
-        val2_entry = tk.Entry(popup)
-        val2_entry.grid(row=5, column=1)
+        tk.Label(popup, text="Colonne secondaire :").grid(row=2, column=0, sticky="w")
     
-        # ✅ Checkboxes pour lire mini/maxi depuis la feuille
-        lire_min_var = tk.BooleanVar()
-        lire_max_var = tk.BooleanVar()
-    
-        lire_min_check = tk.Checkbutton(popup, text="Lire la valeur min depuis la feuille (avant-dernière ligne)", variable=lire_min_var)
-        lire_min_check.grid(row=6, column=0, columnspan=2, sticky="w")
-    
-        lire_max_check = tk.Checkbutton(popup, text="Lire la valeur max depuis la feuille (avant-dernière ligne)", variable=lire_max_var)
-        lire_max_check.grid(row=7, column=0, columnspan=2, sticky="w")
-    
-        def ajouter():
-            nom = nom_entry.get().strip()
-            type_selected = type_test.get()
-            col1 = col1_combo.get().strip()
-            col2 = col2_combo.get().strip()
-    
-            try:
-                val1 = float(val1_entry.get()) if val1_entry.get() else None
-                val2 = float(val2_entry.get()) if val2_entry.get() else None
-            except ValueError:
-                messagebox.showerror("Erreur", "Valeurs numériques invalides")
-                return
-    
-            if not nom or not col1:
-                messagebox.showerror("Erreur", "Nom et colonne principale requis")
-                return
-    
-            test = Test_spe(nom=nom, feuille=None)
-    
-            # Ajoute aussi les cases à cocher à la suite
-            self.tests.append((
-                test, type_selected, col1, col2, val1, val2,
-                lire_min_var.get(), lire_max_var.get()
-            ))
-    
-            self.test_listbox.insert(tk.END, f"[SPE] {nom} ({type_selected})")
-            popup.destroy()
-    
-        tk.Button(popup, text="Ajouter le test", command=ajouter).grid(row=8, column=1, pady=10)
-
+        tk.Button(popup, text="Ajouter le test", command=lambda: self.ajouter_test(nom_entry.get(), col1_combo.get(), col2_combo.get())).grid(row=3, column=1, pady=10)
 
     def executer_tests(self):
         taille_entete_str = self.taille_entete_entry.get()

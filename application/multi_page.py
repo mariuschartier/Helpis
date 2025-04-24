@@ -140,8 +140,6 @@ class MultiPageApp(tk.Tk):
         threading.Thread(target=task, daemon=True).start()
 
 
-
-        
     def bind_button(self, action):
         """Associe une fonction à exécuter via le contrôleur avec animation de chargement."""
         return lambda: self.exec_with_loading(action)

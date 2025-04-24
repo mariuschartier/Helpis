@@ -1,8 +1,6 @@
-from fichier import Fichier
-from Feuille import Feuille
-
+from typing import Callable
 import pandas as pd
-from typing import Optional, Callable
+from Feuille import Feuille
 
 
 class Test_gen:
@@ -14,97 +12,68 @@ class Test_gen:
         return f"Test {self.nom} (critère {self.critere})"
 
     def val_max(self, feuille: Feuille, val_max: float):
-        # Vérifie que les valeurs sont >= val_max
         return self.valider_colonnes(
             feuille,
             condition=lambda x: x <= val_max,
-            message=f"strictement <= {val_max}",
-            erreur_message=f"valeurs ≤ {val_max}"
+            message=f"<= {val_max}",
+            erreur_message=f"valeurs > {val_max}"
         )
 
     def val_min(self, feuille: Feuille, val_min: float):
-        # Vérifie que les valeurs sont <= val_min
         return self.valider_colonnes(
             feuille,
             condition=lambda x: x >= val_min,
-            message=f"strictement >= {val_min}",
-            erreur_message=f"valeurs ≥ {val_min}"
+            message=f">= {val_min}",
+            erreur_message=f"valeurs < {val_min}"
         )
 
     def val_entre(self, feuille: Feuille, val_min: float, val_max: float):
-        # Vérifie que les valeurs sont entre val_min et val_max
         return self.valider_colonnes(
             feuille,
             condition=lambda x: (x >= val_min) & (x <= val_max),
-            message=f"entre {val_min} et {val_max} (inclus)",
-            erreur_message=f"valeurs hors de [{val_min}, {val_max}]"
+            message=f"entre {val_min} et {val_max} inclus",
+            erreur_message=f"valeurs hors [{val_min}, {val_max}]"
         )
 
     def valider_colonnes(
         self,
         feuille: Feuille,
         condition: Callable[[pd.Series], pd.Series],
-        message: str,                  # ce message sert à donner un contexte "valeurs entre", etc.
-        erreur_message: str):
+        message: str,
+        erreur_message: str
+    ):
         erreurs = {}
         df = feuille.get_feuille()
-        ligne_nom = feuille.taille_entete - 1
-        ligne_data = feuille.taille_entete
-    
-        message_final = ""  
-    
+        ligne_unite = feuille.ligne_unite
+        lignes_data = df.iloc[feuille.data_debut : feuille.data_fin or None]
+
+        message_final = ""
+
         for col in df.columns:
-            nom_col = str(df.loc[ligne_nom, col])
+            nom_col = str(df.loc[ligne_unite, col])
+
             if nom_col in self.critere:
-                msg_tmp = f"📊 Colonne '{col}' détectée comme {nom_col} ({self.critere}).\n"
-                print(msg_tmp)
-                # message_final += msg_tmp
-                
-                valeurs = pd.to_numeric(df[col].iloc[ligne_data:], errors='coerce')
+                valeurs = pd.to_numeric(lignes_data[col], errors='coerce')
+
+                if feuille.ignorer_lignes_vides:
+                    valeurs = valeurs.dropna()
+
                 masques_valides = condition(valeurs)
                 valeurs_invalides = valeurs[~masques_valides]
-    
+
                 if not valeurs_invalides.empty:
                     erreurs[col] = valeurs_invalides
-                    feuille.ajouts_erreur(valeurs_invalides.index, col)
-                    msg_tmp = f"❌ Erreurs détectées dans la colonne {col} ({erreur_message})\n"
-                    # message_final += msg_tmp
-                    print(msg_tmp)
+                    feuille.ajouts_erreur(valeurs_invalides.index + feuille.data_debut, col)
+                    message_final += f"❌ {len(valeurs_invalides)} erreurs dans colonne {col} ({erreur_message})\n"
                 else:
-                    msg_tmp = f"✅ Toutes les valeurs dans la colonne {col} sont {message}.\n"
-                    # message_final += msg_tmp
-                    print(msg_tmp)
-    
+                    message_final += f"✅ Colonne {col} : toutes les valeurs sont {message}\n"
+
         if not erreurs:
-            msg_tmp = f"\n🎉 Aucune erreur trouvée dans les colonnes marquées en {self.critere}.\n"
-            print(msg_tmp)
-            message_final += msg_tmp
+            message_final += f"\n🎉 Aucune erreur dans les colonnes marquées : {self.critere}\n"
         else:
-            message_final += "\n🛑 Des erreurs ont été détectées dans les colonnes suivantes :\n"
+            message_final += "\n🛑 Erreurs détectées dans :\n"
             for col, err in erreurs.items():
-                msg_tmp = f"- Colonne {col} : {len(err)} valeurs hors plage.\n"
-                print(msg_tmp)
-                message_final += msg_tmp
-    
-        print( "======================================================================================= \n")
+                message_final += f"- Colonne {col} : {len(err)} erreurs\n"
+
+        message_final += "=======================================================================================\n"
         return message_final
-    
-        
-        
-        
-        
-        
-        
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
