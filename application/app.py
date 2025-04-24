@@ -113,7 +113,7 @@ class ExcelTesterApp(tk.Frame):
             self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
             
-            
+    
             
     def create_file_frame(self):
         self.file_frame = tk.LabelFrame(self.scrollable_frame, text="1. Charger un fichier Excel", bg="#f4f4f4")
@@ -128,6 +128,9 @@ class ExcelTesterApp(tk.Frame):
         self.feuille_combo = ttk.Combobox(self.file_frame, textvariable=self.feuille_nom, state="readonly")
         self.feuille_combo.pack(side="left", padx=5)
         self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.afficher_excel())
+        
+        tk.Button(self.file_frame, text="detail", command=self.ouvrir_popup_manipulation).pack(side="right", padx=5)
+
     
         # Choix de la taille de l'en-tête
         tk.Label(self.file_frame, text="Taille de l'en-tête :").pack(side="left", padx=(10, 0))
@@ -137,7 +140,96 @@ class ExcelTesterApp(tk.Frame):
         self.taille_entete_entry.bind("<KeyRelease>", self.on_key_release)
     
         return self.file_frame  # Retourne le cadre créé
+    
+    
+    
+    def ouvrir_popup_manipulation(self):
+        popup = tk.Toplevel(self)
+        popup.title("Paramètres avancés de la feuille")
+        popup.configure(bg="#f4f4f4")
+    
+        tk.Label(popup, text="Paramètres de lecture du fichier", font=("Segoe UI", 11, "bold"), bg="#f4f4f4").pack(pady=10)
+    
+        champs = [
+            ("Début de l'en-tête :", "entete_debut"),
+            ("Fin de l'en-tête :", "entete_fin"),
+            ("Début des données :", "data_debut"),
+            ("Fin des données :", "data_fin"),
+            ("Colonnes secondaires :", "nb_colonnes_secondaires"),
+            ("Ligne des unités :", "ligne_unite"),  # 🆕 Champ ajouté
+        ]
+    
+        entries = {}
+    
+        for label, key in champs:
+            frame = tk.Frame(popup, bg="#f4f4f4")
+            frame.pack(fill="x", padx=10, pady=2)
+            tk.Label(frame, text=label, width=25, anchor="w", bg="#f4f4f4").pack(side="left")
+        
+            vcmd = (self.register(lambda val: val.isdigit() or val == ""), '%P')
+            entry = tk.Entry(frame, validate="key", validatecommand=vcmd)
+            entry.pack(side="left", fill="x", expand=True)
+            entries[key] = entry
 
+    
+        # ✅ Check : ignorer lignes vides
+        ignore_lignes_vides = tk.BooleanVar()
+        frame_cb = tk.Frame(popup, bg="#f4f4f4")
+        frame_cb.pack(padx=10, pady=5, anchor="w")
+        tk.Checkbutton(frame_cb, text="Ignorer les lignes vides", variable=ignore_lignes_vides, bg="#f4f4f4").pack(side="left")
+    
+        # ⚠️ Zone de message d'erreur
+        label_erreur = tk.Label(popup, text="", fg="red", bg="#f4f4f4", font=("Segoe UI", 9, "italic"))
+        label_erreur.pack(pady=5)
+    
+        # ✅ Boutons
+        frame_btns = tk.Frame(popup, bg="#f4f4f4")
+        frame_btns.pack(pady=10)
+    
+        def appliquer():
+            try:
+                valeurs = {k: int(e.get()) for k, e in entries.items()}
+            except ValueError:
+                messagebox.showerror("Erreur", "Tous les champs doivent être remplis avec des entiers valides.")
+                return
+        
+            # Calcul automatique de la taille d’en-tête
+            taille_entete = valeurs["entete_fin"] - valeurs["entete_debut"] + 1
+            if taille_entete <= 0:
+                messagebox.showerror("Erreur", "L'entête doit contenir au moins une ligne.")
+                return
+        
+            # Vérification des contraintes
+            if valeurs["entete_fin"] >= valeurs["data_debut"]:
+                messagebox.showerror("Erreur", "La fin de l'entête doit être avant le début des données.")
+                return
+        
+            if valeurs["nb_colonnes_secondaires"] >= taille_entete:
+                messagebox.showerror("Erreur", "Le nombre de colonnes secondaires doit être inférieur à la taille de l'entête.")
+                return
+        
+            if not (valeurs["entete_debut"] <= valeurs["ligne_unite"] <= valeurs["entete_fin"]):
+                messagebox.showerror("Erreur", "La ligne d'unité doit être comprise dans l'entête.")
+                return
+        
+            # Appliquer les valeurs
+            self.taille_entete_entry.delete(0, tk.END)
+            self.taille_entete_entry.insert(0, str(taille_entete))
+        
+            # Optionnel : garder les valeurs pour un usage futur
+            self.details_structure = valeurs
+            popup.destroy()
+
+    
+        tk.Button(frame_btns, text="✅ Appliquer", command=appliquer).pack(side="left", padx=10)
+        tk.Button(frame_btns, text="❌ Annuler", command=popup.destroy).pack(side="left", padx=10)
+
+
+
+    
+        
+    
+    
     def create_test_buttons_frame(self):
         frame_btn_test = tk.Frame(self.scrollable_frame)
         frame_btn_test.pack(fill="both", expand=True, padx=10, pady=5)
