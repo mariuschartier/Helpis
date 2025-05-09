@@ -1,10 +1,11 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import pandas as pd
-from fichier import Fichier
-from test_gen import Test_gen
-from test_spe import Test_spe
-from Feuille import Feuille
+from structure.Fichier import Fichier
+from tests.Test_gen import Test_gen
+from tests.Test_spe import Test_spe
+from structure.Feuille import Feuille
+from structure.Entete import Entete
 import os
 import json
 from pathlib import Path
@@ -18,7 +19,8 @@ class ExcelTesterApp(tk.Frame):
         self.controller = controller
         super().__init__(parent)
         self.Parent = parent
-        
+   
+
         
         self.fichier_path = None
         self.tests = []
@@ -27,6 +29,15 @@ class ExcelTesterApp(tk.Frame):
         self.colonnes_disponibles = []
 
         self.prepare_dossiers()
+        self.details_structure = {
+            "entete_debut": 0,
+            "entete_fin": 1,
+            "data_debut": 2,
+            "data_fin": None,
+            "nb_colonnes_secondaires": 0,
+            "ligne_unite": 1,
+            "ignorer_vide": True
+        }
 
         # === Canvas + Scroll principal ===
         self.canvas = tk.Canvas(self, bg="#f4f4f4", width=1000, height=600)
@@ -44,8 +55,7 @@ class ExcelTesterApp(tk.Frame):
         self.canvas.pack(side="left", fill="both", expand=True)
         self.scroll_y.pack(side="right", fill="y")
         self.Parent.update_idletasks()
-        # print(self.Parent.winfo_width())
-        # self.canvas.config(width=1000)  # Définir une largeur fixe (par exemple 400 pixels)
+        
 
         self._active_mouse_scroll_target = None
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
@@ -133,17 +143,58 @@ class ExcelTesterApp(tk.Frame):
 
     
         # Choix de la taille de l'en-tête
+        self.taille_entete_var = tk.StringVar()
         tk.Label(self.file_frame, text="Taille de l'en-tête :").pack(side="left", padx=(10, 0))
-        self.taille_entete_entry = tk.Entry(self.file_frame, width=5)
+        self.taille_entete_entry = tk.Entry(self.file_frame, width=5,textvariable=self.taille_entete_var )
+        self.taille_entete_var.trace_add("write", self.on_taille_entete_change)
         self.taille_entete_entry.pack(side="left", padx=5)
         tk.Button(self.file_frame, text="❓ Aide", command=self.ouvrir_aide).pack(side="right", padx=5)
         self.taille_entete_entry.bind("<KeyRelease>", self.on_key_release)
     
         return self.file_frame  # Retourne le cadre créé
     
-    
+    def on_taille_entete_change(self, *args):
+        """
+        Met à jour la fin de l'en-tête et reconstruit les colonnes disponibles
+        et le dictionnaire d'en-tête en fonction de la nouvelle taille.
+        """
+        # Mettre à jour la fin de l'en-tête
+        self.details_structure["entete_fin"] = (
+            int(self.taille_entete_entry.get()) + self.details_structure["entete_debut"] - 1
+            if self.taille_entete_entry.get().isdigit()
+            else 0
+        )
+
+        # Vérifier si un fichier est chargé
+        if self.df is not None:
+            try:
+                # Reconstruire les colonnes disponibles
+                ligne_entete_debut = self.details_structure.get("entete_debut", 0)
+                self.colonnes_disponibles = list(
+                    self.df.iloc[ligne_entete_debut].dropna().astype(str)
+                )
+
+                # Reconstruire le dictionnaire d'en-tête
+                self.dico_entete()
+
+                # Mettre à jour l'aperçu des colonnes dans l'interface utilisateur
+                self.table["columns"] = list(range(len(self.df.columns)))
+                for col in self.table["columns"]:
+                    self.table.heading(col, text=f"Col {col}")
+
+                # Réinitialiser les données affichées dans le tableau
+                self.table.delete(*self.table.get_children())
+                for i, row in self.df.head(100).iterrows():
+                    self.table.insert("", "end", values=list(row))
+
+            except Exception as e:
+                messagebox.showerror("Erreur", f"Impossible de mettre à jour les colonnes : {e}")        
+
     
     def ouvrir_popup_manipulation(self):
+        if self.df is None:            
+            messagebox.showerror("Erreur", "Un fichier doit etre selectionné.")
+            return
         popup = tk.Toplevel(self)
         popup.title("Paramètres avancés de la feuille")
         popup.configure(bg="#f4f4f4")
@@ -160,6 +211,7 @@ class ExcelTesterApp(tk.Frame):
         ]
     
         entries = {}
+        valeurs_par_defaut = self.details_structure if hasattr(self, "details_structure") else {}
     
         for label, key in champs:
             frame = tk.Frame(popup, bg="#f4f4f4")
@@ -169,11 +221,25 @@ class ExcelTesterApp(tk.Frame):
             vcmd = (self.register(lambda val: val.isdigit() or val == ""), '%P')
             entry = tk.Entry(frame, validate="key", validatecommand=vcmd)
             entry.pack(side="left", fill="x", expand=True)
+            valeur_defaut = valeurs_par_defaut.get(key, "")
+            if key == "data_fin":
+                try:
+                    valeur_defaut = str(self.df.shape[0])  # Nombre de lignes du DataFrame
+                except AttributeError:
+                    messagebox.showwarning("Attention", "La feuille de données n'existe pas. La valeur de 'Fin des données' ne peut pas être déterminée.")
+                    valeur_defaut = ""
+            if key == "data_fin":
+                try:
+                    entry.insert(0, str(self.df.shape[0]))
+                except AttributeError:
+                    entry.insert(0, "")
+            else:
+                entry.insert(0, str(valeur_defaut))  # Initialise avec la valeur par défaut si disponible
+            
             entries[key] = entry
 
-    
-        # ✅ Check : ignorer lignes vides
-        ignore_lignes_vides = tk.BooleanVar()
+        # ✅ Check : ignorer lignes vides (coché par défaut)
+        ignore_lignes_vides = tk.BooleanVar(value=True)
         frame_cb = tk.Frame(popup, bg="#f4f4f4")
         frame_cb.pack(padx=10, pady=5, anchor="w")
         tk.Checkbutton(frame_cb, text="Ignorer les lignes vides", variable=ignore_lignes_vides, bg="#f4f4f4").pack(side="left")
@@ -217,12 +283,13 @@ class ExcelTesterApp(tk.Frame):
             self.taille_entete_entry.insert(0, str(taille_entete))
         
             # Optionnel : garder les valeurs pour un usage futur
+            valeurs["ignorer_lignes_vides"] = ignore_lignes_vides.get()
             self.details_structure = valeurs
             popup.destroy()
 
-    
         tk.Button(frame_btns, text="✅ Appliquer", command=appliquer).pack(side="left", padx=10)
         tk.Button(frame_btns, text="❌ Annuler", command=popup.destroy).pack(side="left", padx=10)
+
 
 
 
@@ -394,19 +461,58 @@ class ExcelTesterApp(tk.Frame):
             messagebox.showwarning("Validation", "Veuillez entrer un nombre entier.")
             self.taille_entete_entry.delete(0, tk.END)
 
+    def dico_entete(self):
+        self.dico_structure = {}
+        ligne_entete_debut = self.details_structure.get("entete_debut", 0)
+        ligne_entete_fin = self.details_structure.get("entete_fin", 1)
+
+        try:
+            for col_idx in range(len(self.df.columns)):
+                current_level = self.dico_structure
+
+                for row_idx in range(ligne_entete_debut, ligne_entete_fin + 1):
+                    cell_value = self.df.iloc[row_idx, col_idx]
+                    if pd.isna(cell_value):
+                        continue
+                    cell_value = str(cell_value).strip()
+
+                    if cell_value not in current_level:
+                        current_level[cell_value] = {}
+
+                    current_level = current_level[cell_value]
+
+            return self.dico_structure
+
+        except Exception as e:
+            messagebox.showerror("Erreur", "Fichier et taille d'entete requis.")
+            # messagebox.showerror("Erreur", f"Impossible de construire le dictionnaire d'en-tête : {e}")
+            return {}
+
+        
+
     def afficher_excel(self):
         self.table.delete(*self.table.get_children())
         try:
             self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None)
+
             self.table["columns"] = list(range(len(self.df.columns)))
-            self.colonnes_disponibles = list(self.df.iloc[0].dropna().astype(str))
+    
+            # 🔍 Récupère les colonnes depuis la bonne ligne d'en-tête
+            ligne_entete_debut = self.details_structure.get("entete_debut", 0)
+            self.colonnes_disponibles = list(self.df.iloc[ligne_entete_debut].dropna().astype(str))
+    
             self.table["show"] = "headings"
             for col in self.table["columns"]:
                 self.table.heading(col, text=f"Col {col}")
+    
             for i, row in self.df.head(100).iterrows():
                 self.table.insert("", "end", values=list(row))
+    
         except Exception as e:
             messagebox.showerror("Erreur", f"Impossible de lire la feuille : {e}")
+        self.dico_entete()
+        
+
 
     def supprimer_test(self):
         selection = self.test_listbox.curselection()
@@ -550,6 +656,23 @@ class ExcelTesterApp(tk.Frame):
 
 
     def popup_ajouter_test_gen(self):
+
+
+        # Supprimer les doublons tout en conservant l'ordre
+        colonnes_uniques = []
+        seen = set()
+        for col in self.colonnes_disponibles:
+            if col not in seen:
+                colonnes_uniques.append(col)
+                seen.add(col)
+
+        tk.Label(popup, text="Colonne à tester :").grid(row=2, column=0, sticky="w")
+        col_test_combobox = ttk.Combobox(popup, values=colonnes_uniques, state="readonly")
+        col_test_combobox.grid(row=2, column=1)
+
+
+
+
         popup = tk.Toplevel(self)
         popup.title("Ajouter un test générique")
 
@@ -596,90 +719,183 @@ class ExcelTesterApp(tk.Frame):
 
         tk.Button(popup, text="Ajouter le test", command=ajouter).grid(row=5, column=1, pady=10)
 
-
     def popup_ajouter_test_spe(self):
-        
-        # Supprimer les doublons tout en conservant l'ordre
-        colonnes_uniques = []
-        seen = set()
-        for col in self.colonnes_disponibles:
-            if col not in seen:
-                colonnes_uniques.append(col)
-                seen.add(col)
-                
-                
-                
+        try:
+            dico = self.dico_entete()  # Assure que self.dico_structure est construit
+        except Exception as e:
+            messagebox.showerror("Erreur", "Fichier et taille d'entete requis.")
+            return
+        if dico == {}:
+            return
+
         popup = tk.Toplevel(self)
         popup.title("Ajouter un test spécifique")
-    
+
+        # Nom du test
         tk.Label(popup, text="Nom du test :").grid(row=0, column=0, sticky="w")
         nom_entry = tk.Entry(popup, width=30)
         nom_entry.grid(row=0, column=1)
-    
+
+        # Type de test
         tk.Label(popup, text="Type de test :").grid(row=1, column=0, sticky="w")
         type_test = ttk.Combobox(popup, values=["val_min", "val_max", "val_entre", "compare_fix", "compare_ratio"], state="readonly")
         type_test.grid(row=1, column=1)
         type_test.set("val_min")
-    
-        tk.Label(popup, text="Colonne 1 :").grid(row=2, column=0, sticky="w")
-        col1_combo = ttk.Combobox(popup, values=colonnes_uniques, state="readonly")
-        col1_combo.grid(row=2, column=1)
-    
+
+        # Choix de la première colonne cible
+        label_col1 = tk.Label(popup, text="Colonne cible 1 :")
+        label_col1.grid(row=2, column=0, sticky="w")
+        colonne_cible_1_combo = ttk.Combobox(popup, state="readonly")
+        colonne_cible_1_combo.grid(row=2, column=1)
+        colonne_cible_1_combo["values"] = list(self.dico_structure.keys())
 
 
-        tk.Label(popup, text="Colonne 2 (si comparaison) :").grid(row=3, column=0, sticky="w")
-        col2_combo = ttk.Combobox(popup, values=colonnes_uniques, state="readonly")
-        col2_combo.grid(row=3, column=1)
+        # Cadres pour les sous-catégories des deux colonnes
+        label_combo1 = tk.Label(popup, text="Sous-catégories 1 :")
+        label_combo1.grid(row=3, column=0, sticky="w")
+        frame_comboboxes_1 = tk.Frame(popup)
+        frame_comboboxes_1.grid(row=4, column=0, columnspan=2, sticky="w")
 
-    
-        # Champs classiques
-        tk.Label(popup, text="Valeur min / différence / ratio :").grid(row=4, column=0, sticky="w")
-        val1_entry = tk.Entry(popup)
-        val1_entry.grid(row=4, column=1)
-    
-        tk.Label(popup, text="Valeur max (si besoin) :").grid(row=5, column=0, sticky="w")
-        val2_entry = tk.Entry(popup)
-        val2_entry.grid(row=5, column=1)
-    
-        # ✅ Checkboxes pour lire mini/maxi depuis la feuille
-        lire_min_var = tk.BooleanVar()
-        lire_max_var = tk.BooleanVar()
-    
-        lire_min_check = tk.Checkbutton(popup, text="Lire la valeur min depuis la feuille (avant-dernière ligne)", variable=lire_min_var)
-        lire_min_check.grid(row=6, column=0, columnspan=2, sticky="w")
-    
-        lire_max_check = tk.Checkbutton(popup, text="Lire la valeur max depuis la feuille (avant-dernière ligne)", variable=lire_max_var)
-        lire_max_check.grid(row=7, column=0, columnspan=2, sticky="w")
-    
+        # Choix de la deuxième colonne cible
+        label_col2 = tk.Label(popup, text="Colonne cible 2 :")
+        colonne_cible_2_combo = ttk.Combobox(popup, state="readonly")
+        colonne_cible_2_combo["values"] = list(self.dico_structure.keys())
+
+
+        label_combo2 =tk.Label(popup, text="Sous-catégories 2 :")
+        frame_comboboxes_2 = tk.Frame(popup)
+
+        comboboxes_1 = []
+        comboboxes_2 = []
+
+        def add_combobox(frame, level, structure, comboboxes):
+            combo = ttk.Combobox(frame, state="readonly")
+            combo.grid(row=level, column=1, padx=5, pady=2, sticky="w")
+            combo["values"] = list(structure.keys())
+            comboboxes.append((combo, structure))
+
+            def on_selection(event=None):
+                while len(comboboxes) > level + 1:
+                    comboboxes[-1][0].destroy()
+                    comboboxes.pop()
+
+                selection = combo.get()
+                if selection in structure and isinstance(structure[selection], dict) and structure[selection]:
+                    add_combobox(frame, level + 1, structure[selection], comboboxes)
+
+            combo.bind("<<ComboboxSelected>>", on_selection)
+
+        def on_colonne_selection(col_combo, frame, comboboxes):
+            for combo, _ in comboboxes:
+                combo.destroy()
+            comboboxes.clear()
+
+            selected_col = col_combo.get()
+            if selected_col in self.dico_structure:
+                add_combobox(frame, 0, self.dico_structure[selected_col], comboboxes)
+
+        colonne_cible_1_combo.bind("<<ComboboxSelected>>", lambda e: on_colonne_selection(colonne_cible_1_combo, frame_comboboxes_1, comboboxes_1))
+        colonne_cible_2_combo.bind("<<ComboboxSelected>>", lambda e: on_colonne_selection(colonne_cible_2_combo, frame_comboboxes_2, comboboxes_2))
+
+        # Champs dynamiques selon le type de test
+        ligne = 5 # derniere ligne  
+
+        label_val_min = tk.Label(popup, text="Valeur minimale :")
+        val_min_entry = tk.Entry(popup)
+
+        label_val_max = tk.Label(popup, text="Valeur maximale :")
+        val_max_entry = tk.Entry(popup)
+
+        label_diff = tk.Label(popup, text="Différence attendue :")
+        diff_entry = tk.Entry(popup)
+
+        label_ratio = tk.Label(popup, text="Ratio attendu :")
+        ratio_entry = tk.Entry(popup)
+
+        for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_diff, diff_entry, label_ratio, ratio_entry, label_col2, colonne_cible_2_combo, label_combo2, frame_comboboxes_2]:
+            widget.grid_forget()
+
+        def afficher_champs_selon_type(event=None):
+            for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_diff, diff_entry, label_ratio, ratio_entry,  label_col2, colonne_cible_2_combo, label_combo2, frame_comboboxes_2]:
+                widget.grid_forget()
+            ligne = 5 # derniere ligne  
+
+            t = type_test.get()
+            ligne_i = ligne
+
+            if t == "val_min":
+                label_val_min.grid(row=ligne_i, column=0, sticky="w")
+                val_min_entry.grid(row=ligne_i, column=1)
+            elif t == "val_max":
+                label_val_max.grid(row=ligne_i, column=0, sticky="w")
+                val_max_entry.grid(row=ligne_i, column=1)
+            elif t == "val_entre":
+                label_val_min.grid(row=ligne_i, column=0, sticky="w")
+                val_min_entry.grid(row=ligne_i, column=1)
+                ligne_i += 1
+                label_val_max.grid(row=ligne_i, column=0, sticky="w")
+                val_max_entry.grid(row=ligne_i, column=1)
+            elif t =="compare_fix"or t =="compare_ratio":
+                label_col2.grid(row=ligne_i, column=0, sticky="w")
+                colonne_cible_2_combo.grid(row=ligne_i, column=1)
+                ligne_i += 1
+                label_combo2.grid(row=ligne_i, column=0, sticky="w")
+                frame_comboboxes_2.grid(row=ligne_i+1, column=0, columnspan=2, sticky="w")
+                ligne_i +=2
+                label_val_min.grid(row=ligne_i, column=0, sticky="w")
+                val_min_entry.grid(row=ligne_i, column=1)
+                ligne +=1
+                if t == "compare_fix":
+                    label_diff.grid(row=ligne_i, column=0, sticky="w")
+                    diff_entry.grid(row=ligne_i, column=1)
+                    ligne +=1
+
+                else:
+                    label_ratio.grid(row=ligne_i, column=0, sticky="w")
+                    ratio_entry.grid(row=ligne_i, column=1)
+                    ligne +=1
+
+
+
+        type_test.bind("<<ComboboxSelected>>", afficher_champs_selon_type)
+        afficher_champs_selon_type()
+
         def ajouter():
             nom = nom_entry.get().strip()
             type_selected = type_test.get()
-            col1 = col1_combo.get().strip()
-            col2 = col2_combo.get().strip()
-    
+
+            col1 = colonne_cible_1_combo.get()
+            col2 = colonne_cible_2_combo.get() if colonne_cible_2_combo.winfo_ismapped() else None
+
+            # Collecte des sous-catégories sélectionnées
+            selection_1 = [combo.get() for combo, _ in comboboxes_1 if combo.get()]
+            selection_2 = [combo.get() for combo, _ in comboboxes_2 if combo.get()]
+
+            # Chemins complets des colonnes
+            chemin_1 = " > ".join([col1] + selection_1) if col1 else None
+            chemin_2 = " > ".join([col2] + selection_2) if col2 else None
+
             try:
-                val1 = float(val1_entry.get()) if val1_entry.get() else None
-                val2 = float(val2_entry.get()) if val2_entry.get() else None
+                val1 = float(val_min_entry.get()) if val_min_entry.get() else None
+                val2 = float(val_max_entry.get()) if val_max_entry.get() else None
             except ValueError:
                 messagebox.showerror("Erreur", "Valeurs numériques invalides")
                 return
-    
-            if not nom or not col1:
-                messagebox.showerror("Erreur", "Nom et colonne principale requis")
+
+            if not nom or not chemin_1:
+                messagebox.showerror("Erreur", "Nom et Colonne cible 1 requis")
                 return
-    
+
             test = Test_spe(nom=nom, feuille=None)
-    
-            # Ajoute aussi les cases à cocher à la suite
-            self.tests.append((
-                test, type_selected, col1, col2, val1, val2,
-                lire_min_var.get(), lire_max_var.get()
-            ))
-    
+            self.tests.append((test, type_selected, chemin_1, chemin_2, val1, val2))
             self.test_listbox.insert(tk.END, f"[SPE] {nom} ({type_selected})")
             popup.destroy()
-    
-        tk.Button(popup, text="Ajouter le test", command=ajouter).grid(row=8, column=1, pady=10)
+
+        tk.Button(popup, text="Ajouter le test", command=ajouter).grid(row=ligne + 6, column=1, pady=10)
+
+
+
+
 
 
     def executer_tests(self):
@@ -698,7 +914,18 @@ class ExcelTesterApp(tk.Frame):
             messagebox.showerror("Erreur", "Aucun fichier ou feuille sélectionné.")
             return
 
-        feuille = Feuille(Fichier(self.fichier_path), self.feuille_nom.get(), taille_entete)
+        fichier = Fichier(self.fichier_path)
+        feuille = Feuille(fichier, self.feuille_nom.get(),
+                          self.details_structure["data_debut"],
+                          self.details_structure["data_fin"],)
+        entete = Entete(feuille,self.details_structure["entete_debut"],
+                        self.details_structure["entete_fin"],
+                        self.details_structure["nb_colonnes_secondaires"],
+                        self.details_structure["ligne_unite"],
+                        self.dico_structure
+                        )
+        feuille.entete = entete
+        # print(feuille.entete.structure)
         feuille.clear_all_cell_colors()
 
 
@@ -729,31 +956,24 @@ class ExcelTesterApp(tk.Frame):
 
             elif isinstance(test[0], Test_spe):
                 # ⬇️ décomposition étendue avec les nouvelles cases à cocher
-                obj, type_test, col1, col2, val1, val2, lire_min, lire_max = test
+                obj, type_test, col1, col2, val1, val2 = test
                 obj.feuille = feuille  # mise à jour de la feuille
             
                 self.result_text.insert(tk.END, f"--- {obj.nom} ({type_test}) ---\n")
             
                 try:
-                    min_max =None
-                    if lire_min or lire_max:
-                        if not( lire_min and lire_max):
-                            if lire_max:
-                                min_max = "maxi"
-                            else:
-                                min_max = "mini"
             
                     # ⬇️ Appel normal
                     if type_test == "val_min":
-                        message = obj.val_min(val1, col1, min_max)
+                        message = obj.val_min(val1, col1)
                     elif type_test == "val_max":
-                        message = obj.val_max(val1, col1, min_max)
+                        message = obj.val_max(val1, col1)
                     elif type_test == "val_entre":
-                        message = obj.val_entre(val1, val2, col1, min_max)
+                        message = obj.val_entre(val1, val2, col1)
                     elif type_test == "compare_fix":
-                        message = obj.compare_col_fix(val1, col1, col2, min_max)
+                        message = obj.compare_col_fix(val1, col1, col2)
                     elif type_test == "compare_ratio":
-                        message = obj.compare_col_ratio(val1, col1, col2, min_max)
+                        message = obj.compare_col_ratio(val1, col1, col2)
             
                     self.result_text.insert(tk.END, str(message) + "\n")
             
@@ -769,8 +989,3 @@ class ExcelTesterApp(tk.Frame):
                 if code > 0:
                     self.erreur_table.insert("", "end", values=(row_idx + 1, col_idx + 1, code))
 
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = ExcelTesterApp(root)
-    root.mainloop()

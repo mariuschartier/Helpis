@@ -1,5 +1,5 @@
-from fichier import Fichier
-from Feuille import Feuille
+from structure.Fichier import Fichier
+from structure.Feuille import Feuille
 
 import pandas as pd
 from typing import Optional, Callable

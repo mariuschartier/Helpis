@@ -1,19 +1,33 @@
 
 from pathlib import Path
-
-
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 from typing import Optional
 
+from structure.Entete import Entete
+from structure.Fichier import Fichier
+
+
 class Feuille:
-    def __init__(self, fichier, nom, taille_entete:int):
+    def __init__(self, fichier : Fichier, nom, debut_data = None, fin_data = None):
         self.fichier = fichier
         self.nom = nom
-        self.taille_entete = taille_entete
         self.df = self.fichier.get_feuille(self.nom)
         self.nb_ligne,  self.nb_colonne = self.df.shape
-        
+        self.entete =  Entete(self)
+
+        if debut_data == None:
+            self.debut_data = self.entete.taille_entete + 1
+        else:
+            self.debut_data = debut_data
+
+
+        if fin_data == None:
+            self.fin_data = len(self.df.index) - 1
+        else:
+            self.fin_data = fin_data
+
+
         
         #  les erreurs ont 3 valeurs de bases :
             # erreurs rouge pale dans les valeurs  et code 1
@@ -25,7 +39,7 @@ class Feuille:
         self.erreurs = [[0 for _ in range(self.nb_colonne)] for _ in range(self.nb_ligne)]
         
     def __str__(self):
-        return f"{self.chemin}(ligne{self.taille_entete})"
+        return f"{self.chemin}(ligne{self.entete.taille_entete})"
     
     
     
@@ -36,9 +50,9 @@ class Feuille:
     
     def ajouts_erreur(self, lignes: list, col_index: int, code_erreur=1):
         for i in lignes:
-            excel_row = i - self.taille_entete
+            excel_row = i - self.entete.taille_entete
             if 0 <= excel_row < self.nb_ligne:
-                self.erreurs[excel_row + self.taille_entete][col_index] = code_erreur
+                self.erreurs[excel_row + self.entete.taille_entete][col_index] = code_erreur
 
     
     def color_cell(self, lignes: list, col_index: int, couleur="FFC7CE"):
@@ -130,3 +144,20 @@ class Feuille:
 
         wb.save(self.fichier.chemin)
         print(f"📁 Fichier sauvegardé : {self.fichier.chemin}")
+        
+        
+        
+    def one_line_header(self, sep=" "):
+        """Fusionne l'entête sur plusieurs lignes en une seule ligne."""
+        new_header = [""] * self.nb_colonne
+        for col in range(self.nb_colonne): 
+            noms = []
+            for row in range(self.entete.taille_entete):
+                val = str(self.df.iloc[row, col]).strip()
+                if val and val.lower() != "nan":
+                    noms.append(val)
+            new_header[col] = sep.join(noms)
+        return new_header
+
+                
+                

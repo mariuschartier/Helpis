@@ -1,7 +1,11 @@
+from front.frame_opti_xls import opti_xls
+from front.page_comparaison import ComparePage
+
+
 import tkinter as tk
 from tkinter import ttk
-from app import ExcelTesterApp
-from frame_opti_xls import opti_xls
+from front.app import ExcelTesterApp
+
 import threading
 
 
@@ -12,7 +16,6 @@ class MultiPageApp(tk.Tk):
         self.title("Application Multi-page - Excel Tool")
         self.geometry("1000x700")
         self.configure(bg="#f4f4f4")
-        print(self.winfo_width())
         # Apparence
         # 🎨 Couleurs harmonisées
         BLEU_PROFOND = "#005f73"
@@ -61,6 +64,8 @@ class MultiPageApp(tk.Tk):
         nav_frame.pack(side="top", fill="x")
         tk.Button(nav_frame, text="📊 Tests Excel", command=lambda: self.afficher_page("tests")).pack(side="left", padx=5)
         tk.Button(nav_frame, text="📁 Conversion XLS → XLSX", command=lambda: self.afficher_page("convert")).pack(side="left", padx=5)
+        tk.Button(nav_frame, text="📈 Comparer fichiers", command=lambda: self.afficher_page("compare")).pack(side="left", padx=5)
+
         tk.Button(nav_frame, text="❓ Aide", command=self.ouvrir_aide).pack(side="right", padx=5)
 
         # Container
@@ -79,6 +84,7 @@ class MultiPageApp(tk.Tk):
     def init_pages(self):
         self.pages["tests"] = ExcelTesterApp(self.container, controller=self)
         self.pages["convert"] = opti_xls(self.container, controller=self)
+        self.pages["compare"] = ComparePage(self.container, controller=self)
 
     def afficher_page(self, nom_page):
         for page in self.pages.values():

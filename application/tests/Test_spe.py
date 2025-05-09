@@ -1,6 +1,10 @@
+
+import tests.fonctions as fn
+import tkinter as tk
 import pandas as pd
-from fichier import Fichier
-from Feuille import Feuille
+
+from structure.Fichier import Fichier
+from structure.Feuille import Feuille
 
 
 class Test_spe:
@@ -8,104 +12,96 @@ class Test_spe:
         self.nom = nom
         self.feuille = feuille
 
-    def __str__(self):
-        return f"Test {self.nom} (fichier: {self.fichier.nom})"
 
-    def val_max(self, val_max: float, colonne: str, min_ou_max: str = None):
+
+    def val_max(self, val_max: float, colonne: str):
         return self.valider_colonne(
             colonne=colonne,
             condition=lambda x: x <= val_max,
             message=f"strictement <= {val_max}",
             erreur_message=f"valeurs ≤ {val_max}",
-            min_ou_max=min_ou_max
             )
 
-    def val_min(self, val_min: float, colonne: str, min_ou_max: str = None):
+    def val_min(self, val_min: float, colonne: str):
         return self.valider_colonne(
             colonne=colonne,
             condition=lambda x: x >= val_min,
             message=f"strictement >= {val_min}",
             erreur_message=f"valeurs ≥ {val_min}",
-            min_ou_max=min_ou_max
         )
 
-    def val_entre(self, val_min: float, val_max: float, colonne: str, min_ou_max: str = None):
+    def val_entre(self, val_min: float, val_max: float, colonne: str):
         return self.valider_colonne(
             colonne=colonne,
             condition=lambda x: (x >= val_min) & (x <= val_max),
             message=f"entre {val_min} et {val_max} (inclus)",
             erreur_message=f"valeurs hors de [{val_min}, {val_max}]",
-            min_ou_max=min_ou_max
-        )
 
-    def valider_colonne(self, colonne: str, condition, message: str, erreur_message: str, min_ou_max: str = None):
+        )
+    
+
+
+    
+
+    def valider_colonne(self, colonne: str, condition, message: str, erreur_message: str):
         erreurs = {}
         message_final = ""
         try:
             df = self.feuille.get_feuille()
         except Exception as e:
-            msg_tmp =f"Erreur lors de la lecture du fichier : {e}"
+            msg_tmp = f"Erreur lors de la lecture du fichier : {e}"
             message_final += msg_tmp
             print(msg_tmp)
             return
-    
+
         # Trouver tous les indices de colonnes correspondant au nom donné
-        indices_colonnes = [i for i, val in enumerate(df.iloc[0]) if val == colonne]
-    
-        if not indices_colonnes:
+        try:
+            indices_colonnes = self.feuille.entete.placement_colonne[colonne]
+        except Exception as e:
             msg_tmp = f"⚠️ La colonne '{colonne}' n'existe pas dans la première ligne."
             message_final += msg_tmp
-
             raise ValueError(msg_tmp)
-    
-        ligne_data = self.feuille.taille_entete
-    
-        # Si on veut cibler uniquement les colonnes "min" ou "max"
-        if min_ou_max:
-            indices_colonnes = [
-                i for i in indices_colonnes
-                if str(df.iloc[1, i]).strip().lower() == min_ou_max.lower()
-            ]
-            if not indices_colonnes:
-                msg_tmp = f"⚠️ Aucune colonne nommée '{colonne}' avec attribut '{min_ou_max}' trouvée."
-                raise ValueError(msg_tmp)
-    
-        for col_index in indices_colonnes:
-            entete_2 = str(df.iloc[1, col_index])
-            valeurs = pd.to_numeric(df.loc[ligne_data:, col_index], errors='coerce')
-            masque = condition(valeurs)
-            valeurs_invalides = valeurs[~masque]
-            self.feuille.ajouts_erreur(valeurs_invalides.index,col_index)
 
-            
-    
-            col_key = f"{colonne} ({entete_2})" if min_ou_max is None else colonne
-    
-            if not valeurs_invalides.empty:
-                erreurs[col_key] = valeurs_invalides
-                msg_tmp = f"❌ Erreurs détectées dans la colonne '{col_key}' ({erreur_message}) :"
-                message_final += msg_tmp
+        ligne_data = self.feuille.debut_data
+        print(ligne_data)
+        entete_2 = str(df.iloc[1, indices_colonnes])
+        valeurs = pd.to_numeric(df.loc[ligne_data:, indices_colonnes], errors='coerce')
 
-                print(msg_tmp)
-                print(valeurs_invalides)
-            else:
-                msg_tmp =f"✅ Toutes les valeurs dans la colonne '{col_key}' sont {message}.\n"
-                message_final += msg_tmp
+        # Vérification et conversion en série si nécessaire
+        if isinstance(valeurs, (int, float)):
+            valeurs = pd.Series([valeurs])
 
-                print(msg_tmp)
+        masque = condition(valeurs)
+        valeurs_invalides = valeurs[~masque]
+        self.feuille.ajouts_erreur(valeurs_invalides.index, indices_colonnes)
+
+        col_key = f"{colonne} ({entete_2})"
+
+        if not valeurs_invalides.empty:
+            erreurs[col_key] = valeurs_invalides
+            msg_tmp = f"❌ Erreurs détectées dans la colonne '{col_key}' ({erreur_message}) :"
+            message_final += msg_tmp
+
+            print(msg_tmp)
+            print(valeurs_invalides)
+        else:
+            msg_tmp = f"✅ Toutes les valeurs dans la colonne '{col_key}' sont {message}.\n"
+            message_final += msg_tmp
+
+            print(msg_tmp)
 
         if not erreurs:
-            msg_tmp ="\n🎉 Aucune erreur trouvée dans les colonnes analysées.\n"
+            msg_tmp = "\n🎉 Aucune erreur trouvée dans les colonnes analysées.\n"
             message_final += msg_tmp
 
             print(msg_tmp)
         else:
-            msg_tmp ="\n🛑 Des erreurs ont été détectées :\n"
+            msg_tmp = "\n🛑 Des erreurs ont été détectées :\n"
             message_final += msg_tmp
 
             print(msg_tmp)
             for col, err in erreurs.items():
-                msg_tmp =f"- Colonne '{col}' : {len(err)} valeurs hors plage.\n"
+                msg_tmp = f"- Colonne '{col}' : {len(err)} valeurs hors plage.\n"
                 message_final += msg_tmp
 
                 print(msg_tmp)
@@ -134,8 +130,8 @@ class Test_spe:
 
         col_1_index = df.iloc[0, :].tolist().index(colonne1)
         col_2_index = df.iloc[0, :].tolist().index(colonne2)
-        ligne_data = self.feuille.taille_entete
-
+        ligne_data = self.feuille.debut_data
+        
         valeurs_col_1 = pd.to_numeric(df.loc[ligne_data:, col_1_index], errors='coerce')
         valeurs_col_2 = pd.to_numeric(df.loc[ligne_data:, col_2_index], errors='coerce')
 
@@ -199,7 +195,7 @@ class Test_spe:
 
         col_1_index = df.iloc[0, :].tolist().index(colonne1)
         col_2_index = df.iloc[0, :].tolist().index(colonne2)
-        ligne_data = self.feuille.taille_entete
+        ligne_data = self.feuille.entete.taille_entete
 
         valeurs_col_1 = pd.to_numeric(df.loc[ligne_data:, col_1_index], errors='coerce')
         valeurs_col_2 = pd.to_numeric(df.loc[ligne_data:, col_2_index], errors='coerce')

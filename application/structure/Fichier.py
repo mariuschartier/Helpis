@@ -11,7 +11,7 @@ class Fichier:
         self.nom =Path(chemin).stem
         
     def __str__(self):
-        return f"{self.chemin}(ligne{self.taille_entete})"
+        return f"{self.chemin})"
     
     
     
