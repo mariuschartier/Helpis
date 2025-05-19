@@ -2,7 +2,7 @@ import imports
 from structure.Fichier import Fichier
 from structure.Feuille import Feuille
 from tests import fonctions as fn
-
+from dataclasses import dataclass,asdict
 from front import multi_page as mp
 
 # main.py

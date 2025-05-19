@@ -46,7 +46,7 @@ def detect_encoding(file_path: str) -> str:
         result = chardet.detect(rawdata)
         return result['encoding']
 
-def opti_html_to_xlsx(file_path: str, name="", taille_entete=2):
+def opti_html_to_xlsx(file_path: str, name=""):
     if name == "":
         name = fichier_du_chemin(file_path)
 

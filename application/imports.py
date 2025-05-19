@@ -11,5 +11,9 @@ fn.install_and_import('datetime')
 fn.install_and_import('bs4')
 fn.install_and_import('chardet')
 fn.install_and_import('scipy')
-
+fn.install_and_import('xlrd')
+# fn.install_and_import('pywin32')
+fn.install_and_import('matplotlib')
+fn.install_and_import('jsonpickle')
+fn.install_and_import('xlsxwriter')
 

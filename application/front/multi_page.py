@@ -14,7 +14,9 @@ class MultiPageApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Application Multi-page - Excel Tool")
-        self.geometry("1000x700")
+        # self.geometry(f"{self.winfo_screenwidth()}x{self.winfo_screenheight()}+0+0")
+        self.state('zoomed')
+
         self.configure(bg="#f4f4f4")
         # Apparence
         # 🎨 Couleurs harmonisées

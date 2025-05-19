@@ -48,15 +48,30 @@ class Test_gen:
         erreur_message: str):
         erreurs = {}
         df = feuille.get_feuille()
-        ligne_nom = feuille.taille_entete - 1
-        ligne_data = feuille.taille_entete
-    
+        ligne_symbole = feuille.entete.ligne_unite
+        ligne_data = feuille.debut_data
+        colonne_symbole = []
+        for cle in feuille.entete.placement_colonne:
+            for  crit in self.critere:
+                if crit in cle:
+                    colonne_symbole.append(feuille.entete.placement_colonne[cle])
+
+        print(ligne_data)
+        message_final = ""  
+        
+        if colonne_symbole == []:   
+            print(f"Erreur : le critère '{self.critere}' n'existe pas dans le DataFrame.")
+            message_final = f"Le critère '{self.critere}' n'existe pas dans le DataFrame.\n"
+            return message_final
+                
+        print(ligne_data)
         message_final = ""  
     
         for col in df.columns:
-            nom_col = str(df.loc[ligne_nom, col])
-            if nom_col in self.critere:
-                msg_tmp = f"📊 Colonne '{col}' détectée comme {nom_col} ({self.critere}).\n"
+            nom_col = str(df.loc[ligne_symbole, col])
+            if  col  in colonne_symbole:
+
+                msg_tmp = f"📊 Colonne '{col+1}' détectée comme {nom_col} ({self.critere}).\n"
                 print(msg_tmp)
                 # message_final += msg_tmp
                 
@@ -67,11 +82,11 @@ class Test_gen:
                 if not valeurs_invalides.empty:
                     erreurs[col] = valeurs_invalides
                     feuille.ajouts_erreur(valeurs_invalides.index, col)
-                    msg_tmp = f"❌ Erreurs détectées dans la colonne {col} ({erreur_message})\n"
+                    msg_tmp = f"❌ Erreurs détectées dans la colonne {col+1} ({erreur_message})\n"
                     # message_final += msg_tmp
                     print(msg_tmp)
                 else:
-                    msg_tmp = f"✅ Toutes les valeurs dans la colonne {col} sont {message}.\n"
+                    msg_tmp = f"✅ Toutes les valeurs dans la colonne {col+1} sont {message}.\n"
                     # message_final += msg_tmp
                     print(msg_tmp)
     
@@ -82,7 +97,7 @@ class Test_gen:
         else:
             message_final += "\n🛑 Des erreurs ont été détectées dans les colonnes suivantes :\n"
             for col, err in erreurs.items():
-                msg_tmp = f"- Colonne {col} : {len(err)} valeurs hors plage.\n"
+                msg_tmp = f"- Colonne {col+1} : {len(err)} valeurs hors plage.\n"
                 print(msg_tmp)
                 message_final += msg_tmp
     

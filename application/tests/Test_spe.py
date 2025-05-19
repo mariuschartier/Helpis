@@ -14,6 +14,15 @@ class Test_spe:
 
 
 
+
+
+
+
+
+    
+
+
+
     def val_max(self, val_max: float, colonne: str):
         return self.valider_colonne(
             colonne=colonne,
@@ -53,7 +62,7 @@ class Test_spe:
             message_final += msg_tmp
             print(msg_tmp)
             return
-
+        print(self.feuille.entete.placement_colonne)
         # Trouver tous les indices de colonnes correspondant au nom donné
         try:
             indices_colonnes = self.feuille.entete.placement_colonne[colonne]

@@ -1,95 +1,173 @@
-import openpyxl
 from structure.Fichier import Fichier
 from structure.Feuille import Feuille
 from datetime import datetime
-from openpyxl import Workbook
+from openpyxl import load_workbook, Workbook
+from openpyxl.utils import get_column_letter
 import pandas as pd
+import os
+import win32com.client as win32
 
-import subprocess
-import sys
-# import pkg_resources
 
-def process_excel_data(input_file='results/Ponte Salle 1.xlsx', 
-                       sheet_name='Données de ponte', 
-                       output_file='results/processed_data.xlsx'):
-    # Charger le fichier Excel avec les valeurs calculées
-    wb = openpyxl.load_workbook(input_file, data_only=True)
+import os
+import win32com.client as win32
+from openpyxl import load_workbook, Workbook
+from openpyxl.utils import get_column_letter
 
-    # Vérifier si la feuille existe
-    if sheet_name not in wb.sheetnames:
-        print(f"La feuille '{sheet_name}' n'existe pas dans le fichier.")
-        return
 
-    ws = wb[sheet_name]
+def get_excel_value(file_path, sheet_name):
+    """
+    Récupère les valeurs d'une feuille Excel.
+
+    :param file_path: Chemin du fichier Excel
+    :param sheet_name: Nom de la feuille
+    :return: Liste de listes représentant les valeurs de la feuille
+    """
+    print(f"Chemin fourni : {file_path}")
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Le fichier '{file_path}' est introuvable.")
+
     data = []
 
-    # Lire toutes les lignes de données tout en conservant None pour les cellules vides
-    for row in ws.iter_rows(min_row=1, values_only=True):
-        # Ajouter chaque ligne comme une liste, tout en gérant les None
-        data.append(list(row))
+    try:
+        # Démarrer une instance d'Excel
+        excel = win32.Dispatch("Excel.Application")
 
-    # Traitement et gestion des None
-    nb_colonnes = len(data[0]) if data else 0  # Nombre de colonnes de la première ligne
-    structured_data = []
+        # Ouvrir le classeur
+        workbook = excel.Workbooks.Open(file_path, ReadOnly=True)
 
-    for r_idx, row in enumerate(data, 1):
-        structured_row = []
-        for c_idx in range(nb_colonnes):
-            if len(row) <= c_idx:
-                cell = None
-                value_to_set = structured_row[c_idx - 1] if c_idx > 0 else None
-            else:
-                cell = row[c_idx]
-                if cell is None:
-                    value_to_set = structured_row[c_idx - 1] if c_idx > 0 else None
-                else:
-                    value_to_set = cell
+        if not workbook:
+            raise ValueError("Le classeur n'a pas pu être ouvert.")
 
-            structured_row.append(value_to_set)
+        # Vérifie si la feuille existe
+        if not any(sheet.Name == sheet_name for sheet in workbook.Sheets):
+            raise ValueError(f"La feuille '{sheet_name}' n'existe pas.")
 
-        structured_data.append(structured_row)
+        # Accéder à la feuille
+        sheet = workbook.Sheets(sheet_name)
+        for row in range(1, sheet.UsedRange.Rows.Count + 1):
+            row_data = []
+            for col in range(1, sheet.UsedRange.Columns.Count + 1):
+                cell = sheet.Cells(row, col)
+                value = cell.Value
+                
+                # Convertir datetime avec tzinfo en naive datetime
+                if isinstance(value, datetime) and value.tzinfo is not None:
+                    value = value.replace(tzinfo=None)
+                
+                row_data.append(value)
+            data.append(row_data)
+
+        # Fermer le classeur sans enregistrer
+        workbook.Close(SaveChanges=False)
+        excel.Quit()
+
+        return data
+
+    except Exception as e:
+        print(f"Erreur lors de la lecture du fichier Excel : {e}")
+        if 'workbook' in locals() and workbook:
+            workbook.Close(SaveChanges=False)
+        if 'excel' in locals():
+            excel.Quit()
+        raise
+
+
+def detect_col_row_span(file_path, sheet_name):
+    """
+    Détecte les cellules fusionnées dans une feuille Excel.
+    Retourne une liste de tuples : (ligne_depart, colonne_depart, rowspan, colspan)
+    sans doublons pour les plages fusionnées.
+    """
+    merged_cells = []
+    seen_areas = set()
+
+    try:
+        excel = win32.Dispatch("Excel.Application")
+        workbook = excel.Workbooks.Open(file_path, ReadOnly=True)
+        sheet = workbook.Sheets(sheet_name)
+
+        max_row = sheet.UsedRange.Rows.Count
+        max_col = sheet.UsedRange.Columns.Count
+
+        for row in range(1, max_row + 1):
+            for col in range(1, max_col + 1):
+                cell = sheet.Cells(row, col)
+                if cell.MergeCells:
+                    merge_area = cell.MergeArea
+                    start_row = merge_area.Row
+                    start_col = merge_area.Column
+                    key = (start_row, start_col, merge_area.Rows.Count, merge_area.Columns.Count)
+                    if key not in seen_areas:
+                        seen_areas.add(key)
+                        merged_cells.append((start_row, start_col, merge_area.Rows.Count, merge_area.Columns.Count))
+
+        workbook.Close(SaveChanges=False)
+        excel.Quit()
+        return merged_cells
+
+    except Exception as e:
+        print(f"Erreur lors de la détection des cellules fusionnées : {e}")
+        if 'workbook' in locals() and workbook:
+            workbook.Close(SaveChanges=False)
+        if 'excel' in locals():
+            excel.Quit()
+        raise
+
+def process_and_format_excel(input_file, sheet_name, output_file):
+    """
+    Lit, détecte les cellules fusionnées et formate les données d'un fichier Excel.
+    Les valeurs des cellules fusionnées sont appliquées uniquement sur les lignes correspondant au rowspan,
+    et les autres colonnes de la plage fusionnée sont remplies avec None.
+
+    :param input_file: Chemin du fichier Excel d'entrée
+    :param sheet_name: Nom de la feuille à traiter
+    :param output_file: Chemin du fichier Excel de sortie
+    """
+    # Lire les données de la feuille
+    data = get_excel_value(input_file, sheet_name)
+
+    # Détecter les cellules fusionnées
+    merged_cells = detect_col_row_span(input_file, sheet_name)
+    print(merged_cells)
+    for row, col, rowspan, colspan in merged_cells:
+        value = data[row - 1][col - 1]  # valeur dans la cellule fusionnée
+        # print(f"Cellule fusionnée détectée à ({row}, {col}) avec rowspan={rowspan} et colspan={colspan}. Valeur : {value}")
+        for c in range(col, col + colspan):  # pour chaque ligne du rowspan
+            for r in range(row, row + rowspan):  # pour chaque colonne de la plage
+                print(value)
+
+                if r == row:  # dans la colonne de départ de la fusion
+                    data[r - 1][c - 1] = value
+                    
+                else:  # autres colonnes de la plage
+                    data[r - 1][c - 1] = None
+
 
     # Créer un nouveau classeur et une nouvelle feuille
-    new_wb = openpyxl.Workbook()
+    new_wb = Workbook()
     new_ws = new_wb.active
     new_ws.title = "Données traitées"
 
-    # Écrire les données structurées dans le fichier
-    for r_idx, row in enumerate(structured_data, 1):
+    # Écrire les données dans la nouvelle feuille
+    for r_idx, row in enumerate(data, 1):
         for c_idx, value in enumerate(row, 1):
             new_ws.cell(row=r_idx, column=c_idx, value=value)
 
-    # Enregistrer le fichier Excel
+    # Enregistrer le fichier formaté
     new_wb.save(output_file)
     print(f"Les données ont été enregistrées dans '{output_file}'.")
-
-    # Afficher les 100 premières lignes de la structure finale
-    for index, row in enumerate(structured_data[:100]):  # Limiter à 100 lignes
-        print(f"Ligne {index + 1}: {row}")  # Afficher chaque ligne
-
-# Exemple d'utilisation
-# process_excel_data()
-    
-    
-    
-    
-# # Exemple d'utilisation
-# input_file = 'results/Ponte Salle 1.xlsx'
-# output_file = 'output.xlsx'
-# sheet_name = "Données de ponte" # Remplacez par le nom de votre feuille
-# process_xlsx(input_file, output_file, sheet_name)
-
-
+    print(f"Les données ont été enregistrées dans '{output_file}'.")
 
 def determine_jour(date_str):
     # Parser la date
     dt = datetime.strptime(date_str, "%d/%m/%y %H:%M")
-
-    # Extraire jour du mois et mois en format 2 chiffres
-    jour_mois = dt.strftime("%d")  # exemple : '02'
-    mois = dt.strftime("%m")       # exemple : '06'
-
-    return jour_mois, mois
+    
+    # Extraire jour du mois, mois et année en format 4 chiffres
+    jour_mois = dt.strftime("%d")  # exemple : '15'
+    mois = dt.strftime("%m")       # exemple : '08'
+    annee = dt.strftime("%Y")      # exemple : '2023'
+    
+    return jour_mois, mois, annee
 
 def moyenne_par_jour(feuille,output_file ,date_col=0):
     wb = Workbook()
@@ -100,36 +178,32 @@ def moyenne_par_jour(feuille,output_file ,date_col=0):
     nb_colonnes = min(feuille.nb_colonne, 21)
 
     # Copier les lignes d'entête
-    for row_idx in range(feuille.taille_entete):
+    for row_idx in range(feuille.entete.taille_entete):
         for col_idx in range(nb_colonnes):
             valeur = feuille.df.iloc[row_idx, col_idx]
             ws.cell(row=row_idx + 1, column=col_idx + 1, value=valeur)
 
     # Regrouper les lignes par jour
     jours_dict = {}
-    for idx in range(feuille.taille_entete, nb_lignes):
+    for idx in range(feuille.debut_data, nb_lignes):
         date_cell = feuille.df.iloc[idx, date_col]
         if pd.isna(date_cell):
             continue
-        if isinstance(date_cell, datetime):
-            dt = date_cell
-        else:
-            try:
-                dt = datetime.strptime(str(date_cell), "%d/%m/%y %H:%M")
-            except Exception:
-                continue  # Ignorer si la cellule n'est pas une date valide
+    
+        try:
+            jour, mois, annee = determine_jour(date_cell)
+        except Exception:
+            continue  # Ignorer si la cellule n'est pas une date valide
 
-        jour, mois = dt.strftime("%d"), dt.strftime("%m")
-        clef_jour = f"{jour}/{mois}"
-        clef_date = datetime(2000, int(mois), int(jour))  # On met 2000 comme annee fictive
-
+        clef_jour = f"{jour}/{mois}/{annee}"
         if clef_jour not in jours_dict:
-            jours_dict[clef_jour] = {"rows": [], "date": clef_date}
+            jours_dict[clef_jour] = {"rows": [], "date": clef_jour}
         jours_dict[clef_jour]["rows"].append(idx)
 
     # Calculer la moyenne pour chaque jour
-    ligne_resultat = feuille.taille_entete + 1
-    for clef_jour, info in sorted(jours_dict.items(), key=lambda x: x[1]["date"]):
+    ligne_resultat = feuille.debut_data
+    for clef_jour, info in sorted(jours_dict.items(), key=lambda x: datetime.strptime(x[1]["date"], "%d/%m/%Y")):
+        
         rows = info["rows"]
         moyennes = []
         for col_index in range(nb_colonnes):
@@ -156,11 +230,6 @@ def moyenne_par_jour(feuille,output_file ,date_col=0):
     print(f"Les données ont été enregistrées dans '{output_file}'.")
 
 
-
-from datetime import datetime
-from openpyxl import Workbook
-import pandas as pd
-
 def determine_semaine(date_str):
     # Parser la date
     dt = datetime.strptime(date_str, "%d/%m/%y %H:%M")
@@ -178,14 +247,14 @@ def moyenne_par_semaine(feuille, output_file,date_col=0):
     nb_colonnes = min(feuille.nb_colonne, 21)
 
     # Copier les lignes d'entête
-    for row_idx in range(feuille.taille_entete):
+    for row_idx in range(feuille.entete.taille_entete):
         for col_idx in range(nb_colonnes):
             valeur = feuille.df.iloc[row_idx, col_idx]
             ws.cell(row=row_idx + 1, column=col_idx + 1, value=valeur)
 
     # Regrouper les lignes par semaine
     semaines_dict = {}
-    for idx in range(feuille.taille_entete, nb_lignes):
+    for idx in range(feuille.debut_data, nb_lignes):
         date_cell = feuille.df.iloc[idx, date_col]
         if pd.isna(date_cell):
             continue
@@ -204,7 +273,7 @@ def moyenne_par_semaine(feuille, output_file,date_col=0):
         semaines_dict[clef_semaine]["rows"].append(idx)
 
     # Calculer la moyenne pour chaque semaine
-    ligne_resultat = feuille.taille_entete + 1
+    ligne_resultat = feuille.debut_data
     for clef_semaine, info in sorted(semaines_dict.items(), key=lambda x: x[1]["date"]):
         rows = info["rows"]
         moyennes = []

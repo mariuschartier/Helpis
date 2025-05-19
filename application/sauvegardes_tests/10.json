@@ -1,0 +1,21 @@
+[
+  {
+    "type": "spe",
+    "nom": "10",
+    "test_type": "val_min",
+    "col1": "Sonde 1 > °C",
+    "col2": null,
+    "val1": 10.0,
+    "val2": null
+  },
+  {
+    "type": "gen",
+    "nom": "10",
+    "critere": [
+      "°"
+    ],
+    "test_type": "val_min",
+    "val_min": 10.0,
+    "val_max": null
+  }
+]

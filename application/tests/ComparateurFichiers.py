@@ -15,7 +15,9 @@ class ComparateurFichiers:
     def collecter_donnees(self):
         datas = []
         for feuille in self.feuilles:
-            df = feuille.df.iloc[feuille.taille_entete:]
+            debut = feuille.debut_data
+            fin = feuille.fin_data
+            df = feuille.df.iloc[debut:fin+1, :].copy()
             if not df.empty:
                 datas.append(df.reset_index(drop=True))
         if not datas:

@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import pandas as pd
+import jsonpickle
 from structure.Fichier import Fichier
 from tests.Test_gen import Test_gen
 from tests.Test_spe import Test_spe
@@ -10,6 +11,7 @@ import os
 import json
 from pathlib import Path
 import threading
+import webbrowser
 
 
 
@@ -31,31 +33,50 @@ class ExcelTesterApp(tk.Frame):
         self.prepare_dossiers()
         self.details_structure = {
             "entete_debut": 0,
-            "entete_fin": 1,
-            "data_debut": 2,
+            "entete_fin": 0,
+            "data_debut": 1,
             "data_fin": None,
             "nb_colonnes_secondaires": 0,
-            "ligne_unite": 1,
+            "ligne_unite": 0,
             "ignorer_vide": True
         }
+        
 
         # === Canvas + Scroll principal ===
-        self.canvas = tk.Canvas(self, bg="#f4f4f4", width=1000, height=600)
+        self.canvas = tk.Canvas(self, bg="#f4f4f4")
+        self.canvas.pack(side="left", fill="both", expand=True)
+
         self.scroll_y = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.scroll_y.pack(side="right", fill="y")
+
+        # Créer le frame qui sera scrollable
         self.scrollable_frame = tk.Frame(self.canvas, bg="#f4f4f4")
 
+        # Lier le resize du frame à la zone de scroll
         self.scrollable_frame.bind(
             "<Configure>",
-            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+            lambda e: self.canvas.configure(
+                scrollregion=self.canvas.bbox("all")
+            )
         )
 
-        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw",width=980)
+        # Créer une fenêtre dans le canvas pour y placer le frame
+        self.canvas_window = self.canvas.create_window(
+            (0, 0), window=self.scrollable_frame, anchor="nw"
+        )
+
+        # Assurer que la largeur du frame s'ajuste à celle du canvas
+        def resize_frame(event):
+            canvas_width = event.width
+            self.canvas.itemconfig(self.canvas_window, width=canvas_width)
+
+        self.canvas.bind("<Configure>", resize_frame)
+
+        # Relier la scrollbar au canvas
         self.canvas.configure(yscrollcommand=self.scroll_y.set)
 
-        self.canvas.pack(side="left", fill="both", expand=True)
-        self.scroll_y.pack(side="right", fill="y")
+        # Mise à jour des tâches d'idéalisation
         self.Parent.update_idletasks()
-        
 
         self._active_mouse_scroll_target = None
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
@@ -146,6 +167,7 @@ class ExcelTesterApp(tk.Frame):
         self.taille_entete_var = tk.StringVar()
         tk.Label(self.file_frame, text="Taille de l'en-tête :").pack(side="left", padx=(10, 0))
         self.taille_entete_entry = tk.Entry(self.file_frame, width=5,textvariable=self.taille_entete_var )
+        self.taille_entete_var.set(1)  # Met à jour l'Entry avec 1
         self.taille_entete_var.trace_add("write", self.on_taille_entete_change)
         self.taille_entete_entry.pack(side="left", padx=5)
         tk.Button(self.file_frame, text="❓ Aide", command=self.ouvrir_aide).pack(side="right", padx=5)
@@ -155,8 +177,7 @@ class ExcelTesterApp(tk.Frame):
     
     def on_taille_entete_change(self, *args):
         """
-        Met à jour la fin de l'en-tête et reconstruit les colonnes disponibles
-        et le dictionnaire d'en-tête en fonction de la nouvelle taille.
+        Met à jour la fin de l'en-tête 
         """
         # Mettre à jour la fin de l'en-tête
         self.details_structure["entete_fin"] = (
@@ -164,33 +185,12 @@ class ExcelTesterApp(tk.Frame):
             if self.taille_entete_entry.get().isdigit()
             else 0
         )
+        self.details_structure["ligne_unite"] = self.details_structure["entete_fin"]
+        self.details_structure["data_debut"] = self.details_structure["entete_fin"]+1
 
-        # Vérifier si un fichier est chargé
-        if self.df is not None:
-            try:
-                # Reconstruire les colonnes disponibles
-                ligne_entete_debut = self.details_structure.get("entete_debut", 0)
-                self.colonnes_disponibles = list(
-                    self.df.iloc[ligne_entete_debut].dropna().astype(str)
-                )
+        self.dico_entete()
+ 
 
-                # Reconstruire le dictionnaire d'en-tête
-                self.dico_entete()
-
-                # Mettre à jour l'aperçu des colonnes dans l'interface utilisateur
-                self.table["columns"] = list(range(len(self.df.columns)))
-                for col in self.table["columns"]:
-                    self.table.heading(col, text=f"Col {col}")
-
-                # Réinitialiser les données affichées dans le tableau
-                self.table.delete(*self.table.get_children())
-                for i, row in self.df.head(100).iterrows():
-                    self.table.insert("", "end", values=list(row))
-
-            except Exception as e:
-                messagebox.showerror("Erreur", f"Impossible de mettre à jour les colonnes : {e}")        
-
-    
     def ouvrir_popup_manipulation(self):
         if self.df is None:            
             messagebox.showerror("Erreur", "Un fichier doit etre selectionné.")
@@ -198,7 +198,8 @@ class ExcelTesterApp(tk.Frame):
         popup = tk.Toplevel(self)
         popup.title("Paramètres avancés de la feuille")
         popup.configure(bg="#f4f4f4")
-    
+        popup.grab_set()
+
         tk.Label(popup, text="Paramètres de lecture du fichier", font=("Segoe UI", 11, "bold"), bg="#f4f4f4").pack(pady=10)
     
         champs = [
@@ -290,12 +291,6 @@ class ExcelTesterApp(tk.Frame):
         tk.Button(frame_btns, text="✅ Appliquer", command=appliquer).pack(side="left", padx=10)
         tk.Button(frame_btns, text="❌ Annuler", command=popup.destroy).pack(side="left", padx=10)
 
-
-
-
-    
-        
-    
     
     def create_test_buttons_frame(self):
         frame_btn_test = tk.Frame(self.scrollable_frame)
@@ -330,35 +325,43 @@ class ExcelTesterApp(tk.Frame):
         # Créer un LabelFrame
         self.excel_preview_frame = tk.LabelFrame(self.scrollable_frame, text="3. Aperçu du fichier Excel", bg="#f4f4f4")
         self.excel_preview_frame.pack(fill="both", expand=True, padx=10, pady=5)
-        
-        # Créer le Treeview directement dans le LabelFrame
-        self.table = ttk.Treeview(self.excel_preview_frame, show='headings', height=10)
-        self.table.grid(row=0, column=0, sticky='nsew')
-        
+
+        # Créer le Treeview avec une colonne pour les numéros de ligne
+        self.table = ttk.Treeview(self.excel_preview_frame, show="tree headings", height=15)
+        self.table.grid(row=0, column=0, sticky="nsew")
+
         # Scrollbars attachées au LabelFrame
         scroll_y = tk.Scrollbar(self.excel_preview_frame, orient="vertical", command=self.table.yview)
         scroll_y.grid(row=0, column=1, sticky='ns')
         self.table.configure(yscrollcommand=scroll_y.set)
-        
+
         scroll_x = tk.Scrollbar(self.excel_preview_frame, orient="horizontal", command=self.table.xview)
         scroll_x.grid(row=1, column=0, sticky='ew')
         self.table.configure(xscrollcommand=scroll_x.set)
-        
+
         # Configurer la grille pour que le tableau prenne l'espace
         self.excel_preview_frame.grid_rowconfigure(0, weight=1)
         self.excel_preview_frame.grid_columnconfigure(0, weight=1)
-        
-        # Configuration des colonnes
-        self.table["columns"] = list(range(15))
-        for col in range(15):
-            self.table.heading(col, text=f"Col {col}")
-            self.table.column(col, width=100)
-        
-        # Exemple de remplissage
-        for i in range(50):
-            self.table.insert("", "end", values=[f"Série {i}"] + [f"Valeur {j}" for j in range(14)])
-    
 
+        # Exemple de colonnes (15 colonnes de données)
+        nb_cols = 15
+        col_names = [f"Col {i+1}" for i in range(nb_cols)]
+        self.table["columns"] = col_names
+
+        self.table.heading("#0", text="Ligne", anchor="center")
+        self.table.column("#0", width=40, minwidth=30, anchor="center", stretch=False)
+        for name in col_names:
+            self.table.heading(name, text=name)
+            self.table.column(name, anchor="center", width=120, minwidth=100, stretch=True)
+
+        # Exemple de remplissage avec numéros de ligne et valeurs fictives
+        for i in range(50):
+            values = [f"Valeur {j+1}" for j in range(nb_cols)]
+            # Insérer avec le numéro de ligne (text=) et les valeurs
+            self.table.insert("", "end", text=str(i + 1), values=values, tags=("ligne",))
+
+        # (Optionnel) Mettre la ligne en bleu (limite : toute la ligne)
+        # self.table.tag_configure("ligne", foreground="blue")
 
         return self.excel_preview_frame
 
@@ -369,30 +372,53 @@ class ExcelTesterApp(tk.Frame):
             self.table.config(width=max_width)
 
     def create_results_frame(self):
-        self.results_frame = tk.LabelFrame(self.scrollable_frame, text="4. Résultats / Erreurs", bg="#f4f4f4")
+        # Cadre pour les résultats du test
+        self.results_frame = tk.LabelFrame(self, text="4. Résultats du test", bg="#f4f4f4")
         self.results_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        self.result_text = tk.Text(self.results_frame, height=10, wrap="none")
-        self.result_text.pack(fill="both", expand=True, padx=10, pady=5)
+        # Barre de défilement verticale
+        scroll_y = tk.Scrollbar(self.results_frame, orient="vertical")
+        scroll_y.pack(side="right", fill="y")
 
-        # Barres de défilement pour les résultats
-        result_scroll_y = tk.Scrollbar(self.results_frame, command=self.result_text.yview)
-        result_scroll_y.pack(side="right", fill="y")
-        result_scroll_x = tk.Scrollbar(self.results_frame, orient="horizontal", command=self.result_text.xview)
-        result_scroll_x.pack(side="bottom", fill="x")
+        # Barre de défilement horizontale
+        scroll_x = tk.Scrollbar(self.results_frame, orient="horizontal")
+        scroll_x.pack(side="bottom", fill="x")
 
-        self.result_text.configure(yscrollcommand=result_scroll_y.set, xscrollcommand=result_scroll_x.set)
+        # Zone de texte avec padding
+            # Zone de texte avec padding
+        self.result_text = tk.Text(
+            self.results_frame, 
+            height=10, 
+            wrap="none",  # Pas de retour à la ligne automatique
+            xscrollcommand=scroll_x.set, 
+            yscrollcommand=scroll_y.set,
+            padx=5, 
+            pady=5
+        )
+        self.result_text.pack(fill="both", expand=True)
+
+        # Méthode pour ajouter du texte sans le remplacer
+ 
+        self.result_text.pack(fill="both", expand=True)
+
+        # Configuration des barres de défilement
+        scroll_y.config(command=self.result_text.yview)
+        scroll_x.config(command=self.result_text.xview)
+
+
+
+
+
         return self.results_frame
-
 
     def create_error_details_frame(self):
         self.error_details_frame = tk.LabelFrame(self.scrollable_frame, text="5. Détails des erreurs", bg="#f4f4f4")
         self.error_details_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        self.erreur_table = ttk.Treeview(self.error_details_frame, columns=("Ligne", "Colonne", "Code"), show="headings")
+        self.erreur_table = ttk.Treeview(self.error_details_frame, columns=("Ligne", "Colonne", "Valeur"), show="headings")
         self.erreur_table.heading("Ligne", text="Ligne")
         self.erreur_table.heading("Colonne", text="Colonne")
-        self.erreur_table.heading("Code", text="Code d'erreur")
+        self.erreur_table.heading("Valeur", text="Valeur d'erreur")
         self.erreur_table.pack(side="left", fill="both", expand=True)
 
         # Barres de défilement pour les détails des erreurs
@@ -406,10 +432,12 @@ class ExcelTesterApp(tk.Frame):
 
 
         # texte.config(state="disabled")
+    
     def ouvrir_aide(self):
         aide_popup = tk.Toplevel(self)
         aide_popup.title("Aide - Utilisation")
         aide_popup.geometry("600x400")
+        aide_popup.grab_set()
 
         texte = tk.Text(aide_popup, wrap="word", font=("Segoe UI", 10))
         texte.pack(fill="both", expand=True, padx=10, pady=10)
@@ -487,32 +515,33 @@ class ExcelTesterApp(tk.Frame):
             messagebox.showerror("Erreur", "Fichier et taille d'entete requis.")
             # messagebox.showerror("Erreur", f"Impossible de construire le dictionnaire d'en-tête : {e}")
             return {}
-
-        
+   
 
     def afficher_excel(self):
-        self.table.delete(*self.table.get_children())
         try:
-            self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None)
+            # Vider les anciennes données
+            self.table.delete(*self.table.get_children())
 
-            self.table["columns"] = list(range(len(self.df.columns)))
-    
-            # 🔍 Récupère les colonnes depuis la bonne ligne d'en-tête
-            ligne_entete_debut = self.details_structure.get("entete_debut", 0)
-            self.colonnes_disponibles = list(self.df.iloc[ligne_entete_debut].dropna().astype(str))
-    
-            self.table["show"] = "headings"
-            for col in self.table["columns"]:
-                self.table.heading(col, text=f"Col {col}")
-    
-            for i, row in self.df.head(100).iterrows():
-                self.table.insert("", "end", values=list(row))
-    
+            # Lire le fichier Excel
+            self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None)
+            nb_cols = len(self.df.columns)
+            col_names = [f"Col {i+1}" for i in range(nb_cols)]
+
+            # Réinitialiser les colonnes
+            self.table["columns"] = col_names
+
+            for name in col_names:
+                self.table.heading(name, text=name)
+                self.table.column(name, anchor="center", width=120, minwidth=100, stretch=True)
+
+            # Remplir le tableau
+            for i, row in self.df.head(50).iterrows():
+                self.table.insert("", "end", text=str(i), values=list(row))
+
         except Exception as e:
-            messagebox.showerror("Erreur", f"Impossible de lire la feuille : {e}")
+            messagebox.showerror("Erreur", f"Impossible de lire le fichier : {e}")
         self.dico_entete()
         
-
 
     def supprimer_test(self):
         selection = self.test_listbox.curselection()
@@ -521,30 +550,30 @@ class ExcelTesterApp(tk.Frame):
     
         # Supprimer dans l'ordre inverse pour éviter les décalages d'index
         for index in reversed(selection):
-            self.test_listbox.delete(index)
             del self.tests[index]
+        self.append_text( f"{len(selection)} test(s) supprimé(s).", color="red")
     
-        self.result_text.insert(tk.END, f"{len(selection)} test(s) supprimé(s).\n")
-    
-                
-
     
     def sauvegarder_tests(self):
         Path("sauvegardes_tests").mkdir(exist_ok=True)
-        from tkinter import filedialog
+        
         chemin = filedialog.asksaveasfilename(
             defaultextension=".json",
             filetypes=[("JSON", "*.json")],
-            initialdir="sauvegardes_tests",  # Répertoire par défaut
+            initialdir="sauvegardes_tests",
             title="Sauvegarder les tests"
         )
+        
         if not chemin:
             return
-    
+
         export = []
+
         for test in self.tests:
-            if isinstance(test[0], Test_gen):
-                obj, type_test, val_min, val_max = test
+            obj = test[0]
+
+            if isinstance(obj, Test_gen):
+                _, type_test, val_min, val_max = test
                 export.append({
                     "type": "gen",
                     "nom": obj.nom,
@@ -553,10 +582,10 @@ class ExcelTesterApp(tk.Frame):
                     "val_min": val_min,
                     "val_max": val_max
                 })
-            elif isinstance(test[0], Test_spe):
-                obj, test_type, col1, col2, val1, val2, *options = test
-                lire_min = options[0] if len(options) > 0 else False
-                lire_max = options[1] if len(options) > 1 else False
+
+            elif isinstance(obj, Test_spe):
+                # test, type_selected, chemin_1, chemin_2, val1, val2
+                _, test_type, col1, col2, val1, val2 = test
                 export.append({
                     "type": "spe",
                     "nom": obj.nom,
@@ -564,160 +593,250 @@ class ExcelTesterApp(tk.Frame):
                     "col1": col1,
                     "col2": col2,
                     "val1": val1,
-                    "val2": val2,
-                    "lire_min": lire_min,
-                    "lire_max": lire_max
+                    "val2": val2
                 })
 
-    
-        with open(chemin, "w", encoding="utf-8") as f:
-            json.dump(export, f, ensure_ascii=False, indent=2)
+            else:
+                # Par défaut, utiliser jsonpickle pour les objets inconnus
+                export.append({
+                    "type": "unknown",
+                    "data": jsonpickle.encode(obj)
+                })
 
-            
-            
+        # Sauvegarder en JSON
+        with open(chemin, "w", encoding="utf-8") as f:
+            json.dump(export, f, ensure_ascii=False, indent=2)      
+    
     def importer_tests(self):
         chemin = filedialog.askopenfilename(
             filetypes=[("JSON", "*.json")],
-            initialdir="sauvegardes_tests",  # Répertoire par défaut
+            initialdir="sauvegardes_tests",
             title="Importer un fichier de tests"
         )
+
         if not chemin:
             return
-        
-    
+
         try:
             with open(chemin, "r", encoding="utf-8") as f:
                 data = json.load(f)
-    
-            for test in data:
-                if test["type"] == "gen":
-                    obj = Test_gen(nom=test["nom"], critere=test["critere"])
-                    self.tests.append((obj, test["test_type"], test.get("val_min"), test.get("val_max")))
-                    self.test_listbox.insert(tk.END, f"[GEN] {test['nom']} ({test['test_type']})")
-                elif test["type"] == "spe":
-                    feuille = None
-                    obj = Test_spe(nom=test["nom"], feuille=feuille)
-                    self.tests.append((
-                        obj,
-                        test["test_type"],
-                        test["col1"],
-                        test["col2"],
-                        test.get("val1"),
-                        test.get("val2"),
-                        test.get("lire_min", False),
-                        test.get("lire_max", False)
-                    ))
-                    self.test_listbox.insert(tk.END, f"[SPE] {test['nom']} ({test['test_type']})")
+
+            for test_data in data:
+                try:
+                    # Type de test
+                    test_type = test_data.get("type")
+
+                    if test_type == "gen":
+                        # Créer une instance de Test_gen
+                        obj = Test_gen(
+                            nom=test_data["nom"],
+                            critere=test_data["critere"]
+                        )
+                        # Ajouter à la liste des tests
+                        self.tests.append((
+                                obj, 
+                                test_data["test_type"], 
+                                test_data.get("val_min"), 
+                                test_data.get("val_max")
+                            ))
+                        self.test_listbox.insert(tk.END, f"[GEN] {test_data['nom']} ({test_data['test_type']})")
+
+                    elif test_type == "spe":
+                        # Créer une instance de Test_spe
+                        feuille = None  # Si nécessaire, adapter pour utiliser un objet ou un fichier
+                        obj = Test_spe(
+                            nom=test_data["nom"],
+                            feuille=feuille
+                        )
+                        # Ajouter à la liste des tests
+                        self.tests.append((
+                            obj,
+                            test_data["test_type"],
+                            test_data["col1"],
+                            test_data["col2"],
+                            test_data.get("val1"),
+                            test_data.get("val2")
+                        ))
+                        self.test_listbox.insert(tk.END, f"[SPE] {test_data['nom']} ({test_data['test_type']})")
+
+                    elif test_type == "unknown":
+                        # Décoder l'objet inconnu avec jsonpickle
+                        obj = jsonpickle.decode(test_data["data"])
+                        self.tests.append((obj,))
+                        self.test_listbox.insert(tk.END, f"[UNKNOWN] {type(obj).__name__}")
+
+                    else:
+                        print(f"Type de test inconnu : {test_type}")
+
+                except Exception as e:
+                    print(f"Erreur lors du chargement d'un test : {e}")
 
         except Exception as e:
             messagebox.showerror("Erreur", f"Impossible de charger les tests : {e}")
+        print(self.tests)
 
-    
+    def append_text(self, new_content, color="black"):
+            if not hasattr(self, "result_text"):
+                print("Erreur : 'result_text' n'a pas été initialisé.")
+                return
+            # Créer le tag uniquement s'il n'existe pas
+            if color not in self.result_text.tag_names():
+                self.result_text.tag_config(color, foreground=color)
+            # Insérer le texte avec le tag de couleur
+            self.result_text.insert("end", new_content + "\n", color)
+            self.result_text.see("end")
+
+    def ouvrir_fichier(self,chemin):
+        # Chemin vers le fichier
+        fichier = chemin
+        # Vérifier si le fichier existe, sinon ouvrir via le navigateur
+        if os.path.exists(fichier):
+            os.startfile(fichier)  # Sur Windows
+        else:
+            # Si pas Windows ou si vous souhaitez ouvrir dans le navigateur :
+            webbrowser.open(fichier)
+
+
     def afficher_details_popup(self, event):
         selection = self.test_listbox.curselection()
         if not selection:
             return
-    
+
         index = selection[0]
         test_info = self.tests[index]
-    
+
         popup = tk.Toplevel(self)
         popup.title("Détails du test")
-        popup.geometry("350x250")
-    
-        if isinstance(test_info[0], Test_spe):
-            # 🛠️ Support des nouveaux champs
-            test_obj, test_type, col1, col2, val1, val2, lire_min, lire_max = test_info
-            type_label = f"Type : {test_type}"
-    
-            champs = {
-                "val_min": [("Colonne", col1), ("Valeur Min", val1), ("Lire min depuis fichier", lire_min)],
-                "val_max": [("Colonne", col1), ("Valeur Max", val1), ("Lire max depuis fichier", lire_max)],
-                "val_entre": [("Colonne", col1), ("Valeur Min", val1), ("Lire min", lire_min), ("Valeur Max", val2), ("Lire max", lire_max)],
-                "compare_fix": [("Colonne 1", col1), ("Colonne 2", col2), ("Différence max", val1)],
-                "compare_ratio": [("Colonne 1", col1), ("Colonne 2", col2), ("Ratio autorisé", val1)],
-            }
-    
-        elif isinstance(test_info[0], Test_gen):
-            test_obj, test_type, val_min, val_max = test_info
-            type_label = f"Type : {test_type}"
-            champs = {
-                "val_min": [("Critères", ", ".join(test_obj.critere)), ("Valeur Min", val_min)],
-                "val_max": [("Critères", ", ".join(test_obj.critere)), ("Valeur Max", val_max)],
-                "val_entre": [("Critères", ", ".join(test_obj.critere)), ("Valeur Min", val_min), ("Valeur Max", val_max)],
-            }
-    
+        popup.geometry("350x350")
+        popup.grab_set()
+
+        # Déballage plus clair
+        test_obj, test_type, *rest = test_info
+        col1 = rest[0] if len(rest) > 0 else None
+        col2 = rest[1] if len(rest) > 1 else None
+        val1 = rest[2] if len(rest) > 2 else None
+        val2 = rest[3] if len(rest) > 3 else None
+
+        # Titre et type
         tk.Label(popup, text=f"Nom : {test_obj.nom}", font=("Segoe UI", 10, "bold")).pack(pady=5)
-        tk.Label(popup, text=type_label).pack(pady=5)
-    
-        for champ, valeur in champs.get(test_type, []):
-            tk.Label(popup, text=f"{champ} : {valeur}").pack(anchor="w", padx=20)
+        tk.Label(popup, text=f"Type : {test_type}", font=("Segoe UI", 10, "italic")).pack(pady=5)
+
+        # Fonction pour créer la liste des champs
+        def creer_champs(test_obj, test_type, col1, col2, val1, val2):
+            if isinstance(test_obj, Test_spe):
+                champs_spe = {
+                    "type_test": [("Type de test", "Test spécifique")],
+                    "val_min": [("Colonne", col1), ("Valeur Min", val1)],
+                    "val_max": [("Colonne", col1), ("Valeur Max", val1)],
+                    "val_entre": [("Colonne", col1), ("Valeur Min", val1),  ("Valeur Max", val2)],
+                    "compare_fix": [("Colonne 1", col1), ("Colonne 2", col2), ("Différence max", val1)],
+                    "compare_ratio": [("Colonne 1", col1), ("Colonne 2", col2), ("Ratio autorisé", val1)],
+                }
+                return champs_spe.get("type_test", []) + champs_spe.get(test_type, [])
+            elif isinstance(test_obj, Test_gen):
+                critere_str = ", ".join(test_obj.critere)
+                champs_gen = {
+                    "type_test": [("Type de test", "Test générique")],
+                    "val_min": [("Critères", critere_str), ("Valeur Min", col1 if col1 is not None else "N/A")],
+                    "val_max": [("Critères", critere_str), ("Valeur Max", col2 if col2 is not None else "N/A")],
+                    "val_entre": [("Critères", critere_str), ("Valeur Min", val1 if val1 is not None else "N/A"), ("Valeur Max", val2 if val2 is not None else "N/A")],
+                }
+                return champs_gen.get("type_test", []) + champs_gen.get(test_type, [])
+            else:
+                return [("Type", "Inconnu")]
+
+        # Création et affichage
+        champs = creer_champs(test_obj, test_type, col1, col2, val1, val2)
+
+        for champ, valeur in champs:
+            if valeur is not None:
+                tk.Label(popup, text=f"{champ} : {valeur}").pack(anchor="w", padx=20)
+
+
 
 
 
     def popup_ajouter_test_gen(self):
-
-
-        # Supprimer les doublons tout en conservant l'ordre
-        colonnes_uniques = []
-        seen = set()
-        for col in self.colonnes_disponibles:
-            if col not in seen:
-                colonnes_uniques.append(col)
-                seen.add(col)
-
-        tk.Label(popup, text="Colonne à tester :").grid(row=2, column=0, sticky="w")
-        col_test_combobox = ttk.Combobox(popup, values=colonnes_uniques, state="readonly")
-        col_test_combobox.grid(row=2, column=1)
-
-
-
-
         popup = tk.Toplevel(self)
         popup.title("Ajouter un test générique")
+        popup.grab_set()
 
+        # Nom du test
         tk.Label(popup, text="Nom du test :").grid(row=0, column=0, sticky="w")
         nom_entry = tk.Entry(popup, width=30)
         nom_entry.grid(row=0, column=1)
 
-        tk.Label(popup, text="Critères (séparés par des virgules) :").grid(row=1, column=0, sticky="w")
-        critere_entry = tk.Entry(popup, width=40)
-        critere_entry.grid(row=1, column=1)
+        # Symbole ou valeur à rechercher
+        tk.Label(popup, text="Valeur/Symbole à rechercher :").grid(row=1, column=0, sticky="w")
+        valeur_entry = tk.Entry(popup, width=30)
+        valeur_entry.grid(row=1, column=1)
 
+        # Type de test
         tk.Label(popup, text="Type de test :").grid(row=2, column=0, sticky="w")
         type_test = ttk.Combobox(popup, values=["val_min", "val_max", "val_entre"], state="readonly")
         type_test.grid(row=2, column=1)
-        type_test.set("val_entre")
+        type_test.set("val_min")
 
-        tk.Label(popup, text="Valeur minimum :").grid(row=3, column=0, sticky="w")
+        # Champs dynamiques
+        label_val_min = tk.Label(popup, text="Valeur minimale :")
         val_min_entry = tk.Entry(popup)
-        val_min_entry.grid(row=3, column=1)
 
-        tk.Label(popup, text="Valeur maximum :").grid(row=4, column=0, sticky="w")
+        label_val_max = tk.Label(popup, text="Valeur maximale :")
         val_max_entry = tk.Entry(popup)
-        val_max_entry.grid(row=4, column=1)
+
+        # Masquer tous les champs dynamiques au départ
+        for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry]:
+            widget.grid_forget()
+
+        def afficher_champs_selon_type(event=None):
+            """Affiche uniquement les champs nécessaires en fonction du type de test."""
+            for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry]:
+                widget.grid_forget()
+
+            t = type_test.get()
+            ligne = 3  # Ligne de départ pour les champs dynamiques
+
+            if t == "val_min":
+                label_val_min.grid(row=ligne, column=0, sticky="w")
+                val_min_entry.grid(row=ligne, column=1)
+            elif t == "val_max":
+                label_val_max.grid(row=ligne, column=0, sticky="w")
+                val_max_entry.grid(row=ligne, column=1)
+            elif t == "val_entre":
+                label_val_min.grid(row=ligne, column=0, sticky="w")
+                val_min_entry.grid(row=ligne, column=1)
+                ligne += 1
+                label_val_max.grid(row=ligne, column=0, sticky="w")
+                val_max_entry.grid(row=ligne, column=1)
+
+        # Lier l'événement de changement de type de test
+        type_test.bind("<<ComboboxSelected>>", afficher_champs_selon_type)
+        afficher_champs_selon_type()  # Afficher les champs initiaux
 
         def ajouter():
+            """Ajoute le test générique."""
             nom = nom_entry.get().strip()
-            criteres = [c.strip() for c in critere_entry.get().split(",") if c.strip()]
+            valeur = valeur_entry.get().strip()
             type_selected = type_test.get()
+
             try:
-                val_min = float(val_min_entry.get()) if val_min_entry.get() else None
-                val_max = float(val_max_entry.get()) if val_max_entry.get() else None
+                val_min = float(val_min_entry.get()) if val_min_entry.winfo_ismapped() and val_min_entry.get() else None
+                val_max = float(val_max_entry.get()) if val_max_entry.winfo_ismapped() and val_max_entry.get() else None
             except ValueError:
-                messagebox.showerror("Erreur", "Valeurs numériques invalides")
+                messagebox.showerror("Erreur", "Veuillez entrer des valeurs numériques valides.")
                 return
 
-            if not nom or not criteres:
-                messagebox.showerror("Erreur", "Nom et critères requis")
+            if not nom or not valeur:
+                messagebox.showerror("Erreur", "Le nom du test et la valeur/symbole sont requis.")
                 return
 
-            test = Test_gen(nom=nom, critere=criteres)
+            test = Test_gen(nom=nom, critere=[valeur])
             self.tests.append((test, type_selected, val_min, val_max))
             self.test_listbox.insert(tk.END, f"[GEN] {nom} ({type_selected})")
             popup.destroy()
 
-        tk.Button(popup, text="Ajouter le test", command=ajouter).grid(row=5, column=1, pady=10)
+        # Bouton pour ajouter le test
+        tk.Button(popup, text="Ajouter le test", command=ajouter).grid(row=6, column=1, pady=10)
 
     def popup_ajouter_test_spe(self):
         try:
@@ -730,6 +849,7 @@ class ExcelTesterApp(tk.Frame):
 
         popup = tk.Toplevel(self)
         popup.title("Ajouter un test spécifique")
+        popup.grab_set()
 
         # Nom du test
         tk.Label(popup, text="Nom du test :").grid(row=0, column=0, sticky="w")
@@ -893,12 +1013,10 @@ class ExcelTesterApp(tk.Frame):
 
         tk.Button(popup, text="Ajouter le test", command=ajouter).grid(row=ligne + 6, column=1, pady=10)
 
-
-
-
-
-
     def executer_tests(self):
+        if self.tests == []:
+            messagebox.showwarning("Attention", "Aucun test sélectionné.")
+            return
         taille_entete_str = self.taille_entete_entry.get()
         if size_str := taille_entete_str.strip():
             try:
@@ -929,7 +1047,6 @@ class ExcelTesterApp(tk.Frame):
         feuille.clear_all_cell_colors()
 
 
-        self.result_text.delete("1.0", tk.END)
         for item in self.erreur_table.get_children():
             self.erreur_table.delete(item)
 
@@ -937,7 +1054,7 @@ class ExcelTesterApp(tk.Frame):
             message = ""
             if isinstance(test[0], Test_gen):
                 obj, type_test, val_min, val_max = test
-                self.result_text.insert(tk.END, f"--- {obj.nom} ({type_test}) fini---\n")
+                self.append_text(f"--- {obj.nom} ({type_test}) ---")
                 try:
                     if type_test == "val_min":
                         message = obj.val_min(feuille, val_min)
@@ -946,12 +1063,12 @@ class ExcelTesterApp(tk.Frame):
                     elif type_test == "val_entre":
                         message = obj.val_entre(feuille, val_min, val_max)
                     
-                    self.result_text.insert(tk.END, str(message) + "\n")
+                    self.append_text(str(message))
 
                     
 
                 except Exception as e:
-                    self.result_text.insert(tk.END, f"Erreur test {obj.nom}: {e}")
+                    self.append_text(f"Erreur test {obj.nom}: {e}", color="red")
 
 
             elif isinstance(test[0], Test_spe):
@@ -959,8 +1076,8 @@ class ExcelTesterApp(tk.Frame):
                 obj, type_test, col1, col2, val1, val2 = test
                 obj.feuille = feuille  # mise à jour de la feuille
             
-                self.result_text.insert(tk.END, f"--- {obj.nom} ({type_test}) ---\n")
-            
+                self.append_text(f"--- {obj.nom} ({type_test}) ---")
+                
                 try:
             
                     # ⬇️ Appel normal
@@ -975,17 +1092,23 @@ class ExcelTesterApp(tk.Frame):
                     elif type_test == "compare_ratio":
                         message = obj.compare_col_ratio(val1, col1, col2)
             
-                    self.result_text.insert(tk.END, str(message) + "\n")
+                    self.append_text(str(message))
             
                 except Exception as e:
-                    self.result_text.insert(tk.END, f"Erreur test {obj.nom}: {e}\n")
+                    self.append_text(f"Erreur test {obj.nom}: {e}", color="red")
 
 
 
-            self.result_text.insert(tk.END, "\n")
+            self.append_text(f"--- FIN TESTS ---\n")
         feuille.error_all_cell_colors()
         for row_idx, ligne in enumerate(feuille.erreurs):
             for col_idx, code in enumerate(ligne):
                 if code > 0:
-                    self.erreur_table.insert("", "end", values=(row_idx + 1, col_idx + 1, code))
+                    self.erreur_table.insert("", "end", values=(row_idx + 1, col_idx + 1, feuille.df.iloc[row_idx, col_idx]))
+        link_label = tk.Label(self.results_frame, text="Cliquez ici pour ouvrir le fichier",
+                      fg="blue", cursor="hand2", font=("Arial", 10, "underline"))
+        link_label.pack(padx=10, pady=10)
+
+        # Bind le clic gauche à la fonction d'ouverture
+        link_label.bind("<Button-1>", lambda e: self.ouvrir_fichier(self.fichier_path))
 
