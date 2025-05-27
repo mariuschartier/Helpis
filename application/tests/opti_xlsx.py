@@ -49,11 +49,15 @@ def get_excel_value(file_path, sheet_name):
             for col in range(1, sheet.UsedRange.Columns.Count + 1):
                 cell = sheet.Cells(row, col)
                 value = cell.Value
-                
-                # Convertir datetime avec tzinfo en naive datetime
-                if isinstance(value, datetime) and value.tzinfo is not None:
-                    value = value.replace(tzinfo=None)
-                
+
+                # Si la cellule contient un datetime
+                if isinstance(value, datetime):
+                    # Supprimer tzinfo si présent
+                    if value.tzinfo is not None:
+                        value = value.replace(tzinfo=None)
+                    # Formater la date selon le format souhaité
+                    value = value.strftime("%Y-%m-%d")  # <-- change ici si tu veux un autre format
+
                 row_data.append(value)
             data.append(row_data)
 
@@ -128,13 +132,11 @@ def process_and_format_excel(input_file, sheet_name, output_file):
 
     # Détecter les cellules fusionnées
     merged_cells = detect_col_row_span(input_file, sheet_name)
-    print(merged_cells)
     for row, col, rowspan, colspan in merged_cells:
         value = data[row - 1][col - 1]  # valeur dans la cellule fusionnée
         # print(f"Cellule fusionnée détectée à ({row}, {col}) avec rowspan={rowspan} et colspan={colspan}. Valeur : {value}")
         for c in range(col, col + colspan):  # pour chaque ligne du rowspan
             for r in range(row, row + rowspan):  # pour chaque colonne de la plage
-                print(value)
 
                 if r == row:  # dans la colonne de départ de la fusion
                     data[r - 1][c - 1] = value
@@ -155,7 +157,6 @@ def process_and_format_excel(input_file, sheet_name, output_file):
 
     # Enregistrer le fichier formaté
     new_wb.save(output_file)
-    print(f"Les données ont été enregistrées dans '{output_file}'.")
     print(f"Les données ont été enregistrées dans '{output_file}'.")
 
 def determine_jour(date_str):
@@ -299,3 +300,18 @@ def moyenne_par_semaine(feuille, output_file,date_col=0):
     # Enregistrer le fichier Excel
     wb.save(output_file)
     print(f"Les données ont été enregistrées dans '{output_file}'.")
+
+
+
+
+def entete_une_ligne(feuille: Feuille, output_file):
+    """
+    Génère un fichier Excel où l'entête (même si elle est sur plusieurs lignes) est ramenée sur une seule ligne.
+    Chaque colonne d'entête est concaténée .
+    """
+    wb = feuille.one_line_header_openpyxl()
+    wb.save(output_file)
+    print(f"Les données ont été enregistrées dans '{output_file}'.")
+
+
+    

@@ -8,9 +8,8 @@ from front.app import ExcelTesterApp
 
 import threading
 
-
-
 class MultiPageApp(tk.Tk):
+    """Application multi-page pour la manipulation de fichiers Excel."""
     def __init__(self):
         super().__init__()
         self.title("Application Multi-page - Excel Tool")
@@ -64,9 +63,9 @@ class MultiPageApp(tk.Tk):
         # Navigation
         nav_frame = tk.Frame(self, bg="#e0e0e0", pady=5)
         nav_frame.pack(side="top", fill="x")
-        tk.Button(nav_frame, text="📊 Tests Excel", command=lambda: self.afficher_page("tests")).pack(side="left", padx=5)
-        tk.Button(nav_frame, text="📁 Conversion XLS → XLSX", command=lambda: self.afficher_page("convert")).pack(side="left", padx=5)
-        tk.Button(nav_frame, text="📈 Comparer fichiers", command=lambda: self.afficher_page("compare")).pack(side="left", padx=5)
+        tk.Button(nav_frame, text="📊 Verification Excel", command=lambda: self.afficher_page("tests")).pack(side="left", padx=5)
+        tk.Button(nav_frame, text="📁 Manipulation", command=lambda: self.afficher_page("convert")).pack(side="left", padx=5)
+        tk.Button(nav_frame, text="📈 Tests Statistiques", command=lambda: self.afficher_page("compare")).pack(side="left", padx=5)
 
         tk.Button(nav_frame, text="❓ Aide", command=self.ouvrir_aide).pack(side="right", padx=5)
 
@@ -104,9 +103,9 @@ class MultiPageApp(tk.Tk):
         texte.pack(fill="both", expand=True, padx=10, pady=10)
         contenu = (
             "Bienvenue dans l'application Excel multi-fonctions 🧪\n"
-            "1. Tests Excel : permet d'ajouter des règles et de colorer les cellules erronées.\n"
-            "2. Conversion : permet de convertir les fichiers .xls vers .xlsx.\n"
-            "3. Résultats : erreurs détectées affichées et enregistrées dans le fichier.\n"
+            "1. 📊 Verification Excel : permet d'effectuer des tests pour détecter des erreurs dans les fichiers .xlsx.\n"
+            "2. 📁 Manipulation : permet de manipuler les fichiers .xls et .xlsx(conversion de .xls à .xlsx, formatage de .xlsx).\n"
+            "3. 📈 Tests Statistiques : permet d'effectuer des tests statistiques sur les fichiers .xlsx\n"
         )
         texte.insert(tk.END, contenu)
         texte.config(state="disabled")

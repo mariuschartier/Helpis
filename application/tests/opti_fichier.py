@@ -11,7 +11,7 @@ def exist_file(file_path: str) -> bool:
     return Path(file_path).is_file()
 
 def format_datetime(dt):
-    return dt.strftime("%d/%m/%y %H:%M")
+    return dt.strftime("%d-%m-%y_%H-%M")
 
 def nb_colonne(table):
     """Renvoie le nombre total de colonnes dans une table HTML, en tenant compte des colspan."""

@@ -3,10 +3,10 @@ from pathlib import Path
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 from typing import Optional
-
+import pandas as pd
 from structure.Entete import Entete
 from structure.Fichier import Fichier
-
+from openpyxl import Workbook
 
 class Feuille:
     def __init__(self, fichier : Fichier, nom, debut_data = None, fin_data = None):
@@ -41,8 +41,6 @@ class Feuille:
     def __str__(self):
         return f"{self.chemin}(ligne{self.entete.taille_entete})"
     
-    
-    
     def get_feuille(self):
         df = self.fichier.get_feuille(self.nom)
         return df
@@ -53,7 +51,6 @@ class Feuille:
             excel_row = i - self.entete.taille_entete
             if 0 <= excel_row < self.nb_ligne:
                 self.erreurs[excel_row + self.entete.taille_entete][col_index] = code_erreur
-
     
     def color_cell(self, lignes: list, col_index: int, couleur="FFC7CE"):
         """
@@ -77,10 +74,6 @@ class Feuille:
 
         wb.save(self.fichier.chemin)
         print(f"✅ Cellules colorées dans {self.fichier.chemin}")
-
-
-    
-
 
     def clear_all_cell_colors(self):
         """
@@ -106,13 +99,7 @@ class Feuille:
 
         wb.save(self.fichier.chemin)
         print(f"📁 Fichier sauvegardé : {self.fichier.chemin}")
-        
-        
-        
-        
-        
-        
-        
+            
     def error_all_cell_colors(self):
         """
         Supprime toutes les couleurs de fond des cellules dans une feuille spécifique
@@ -144,20 +131,40 @@ class Feuille:
 
         wb.save(self.fichier.chemin)
         print(f"📁 Fichier sauvegardé : {self.fichier.chemin}")
-        
-        
-        
-    def one_line_header(self, sep=" "):
-        """Fusionne l'entête sur plusieurs lignes en une seule ligne."""
-        new_header = [""] * self.nb_colonne
-        for col in range(self.nb_colonne): 
-            noms = []
-            for row in range(self.entete.taille_entete):
-                val = str(self.df.iloc[row, col]).strip()
-                if val and val.lower() != "nan":
-                    noms.append(val)
-            new_header[col] = sep.join(noms)
-        return new_header
+                
+    def one_line_header_pandas(self)->pd.DataFrame:
+        # Obtenir la liste représentant l'entête fusionnée
+        entete_list = self.entete.une_ligne()
 
-                
-                
+        # Convertir la liste en DataFrame avec une seule ligne
+        entete_df = pd.DataFrame([entete_list])
+
+        # Extraire les données
+        data = self.df.iloc[self.debut_data:self.fin_data].reset_index(drop=True)
+
+        # Concaténer l'entête et les données
+        resultat = pd.concat([entete_df, data], ignore_index=True)
+
+        return resultat
+            
+    def one_line_header_openpyxl(self, filename=None)->Workbook:
+        # Obtenir l'entête sous forme de liste
+        entete_list = self.entete.une_ligne()
+        # Extraire les données
+        data = self.df.iloc[self.debut_data:self.fin_data].reset_index(drop=True)
+
+        # Créer un nouveau workbook ou ouvrir un existant
+        wb = Workbook()
+        ws = wb.active  # Utiliser la feuille active
+
+        # Écrire la ligne d'entête fusionnée en première ligne
+        for col_num, header_value in enumerate(entete_list, start=1):
+            ws.cell(row=1, column=col_num, value=header_value)
+
+        # Écrire les données à partir de la deuxième ligne
+        for row_idx, row in data.iterrows():
+            for col_idx, value in enumerate(row, start=1):
+                ws.cell(row=row_idx + 2, column=col_idx, value=value)
+        return wb
+        # Enregistrer le fichier
+        # wb.save(filename)

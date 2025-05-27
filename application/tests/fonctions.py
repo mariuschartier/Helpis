@@ -18,6 +18,8 @@ def install_and_import(package, alias=None):
         alias (str, optional): L'alias sous lequel importer le package.
     """
     try:
+        if alias == None:
+            alias = package
         # Tente d'importer le package
         mod = __import__(package)
         print(f"{package} est déjà installé.")
@@ -25,12 +27,23 @@ def install_and_import(package, alias=None):
         print(f"{package} n'est pas installé. Installation en cours...")
         subprocess.check_call([sys.executable, '-m', 'pip', 'install', package])
         # Réessaie d'importer le package après l'installation
-        mod = __import__(package)
+    # try:
+    #         mod = __import__(alias)
+    # except Exception as e:
+    #      print(f"Erreur lors de l'importation de {package} : {e}")
 
-    if alias:
-        # Utilise globals() pour définir l'alias
-        globals()[alias] = mod
-        print(f"{package} importé sous l'alias '{alias}'.")
-        return mod
+
+    # if alias:
+    #     # Utilise globals() pour définir l'alias
+    #     globals()[alias] = mod
+    #     # print(f"{package} importé sous l'alias '{alias}'.")
+    #     return mod
         
 
+
+def to_int(val):
+    try:
+            val = int(val)
+    except ValueError:
+        print("val is not convertible to an integer")
+    return val

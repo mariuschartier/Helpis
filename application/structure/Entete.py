@@ -64,3 +64,12 @@ class Entete:
 
         return positions
         
+
+    def une_ligne(self)->list: 
+        """
+        revoi une version en une seule ligne de l'entete
+        """
+        return self.placement_colonne.keys()
+            
+
+
