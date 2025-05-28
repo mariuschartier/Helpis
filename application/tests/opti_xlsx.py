@@ -102,6 +102,7 @@ def detect_col_row_span(file_path, sheet_name):
                     start_col = merge_area.Column
                     key = (start_row, start_col, merge_area.Rows.Count, merge_area.Columns.Count)
                     if key not in seen_areas:
+                        
                         seen_areas.add(key)
                         merged_cells.append((start_row, start_col, merge_area.Rows.Count, merge_area.Columns.Count))
 
@@ -128,7 +129,9 @@ def process_and_format_excel(input_file, sheet_name, output_file):
     :param output_file: Chemin du fichier Excel de sortie
     """
     # Lire les données de la feuille
+    print("debut")
     data = get_excel_value(input_file, sheet_name)
+    print("Lecture des données terminée.========================================================================================================================================\n=========================================================================================================================\n")
 
     # Détecter les cellules fusionnées
     merged_cells = detect_col_row_span(input_file, sheet_name)
@@ -171,6 +174,8 @@ def determine_jour(date_str):
     return jour_mois, mois, annee
 
 def moyenne_par_jour(feuille,output_file ,date_col=0):
+    """
+    Calcule la moyenne des valeurs pour chaque jour dans une feuille Excel."""
     wb = Workbook()
     ws = wb.active
     ws.title = "moyenne"
@@ -240,6 +245,8 @@ def determine_semaine(date_str):
     return f"{annee}-S{semaine:02d}", dt
 
 def moyenne_par_semaine(feuille, output_file,date_col=0):
+    """
+    Calcule la moyenne des valeurs pour chaque semaine dans une feuille Excel."""
     wb = Workbook()
     ws = wb.active
     ws.title = "moyenne"

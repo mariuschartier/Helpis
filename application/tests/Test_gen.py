@@ -6,6 +6,8 @@ from typing import Optional, Callable
 
 
 class Test_gen:
+    """
+    Classe de base pour les tests génériques sur les feuilles d'un fichier Excel."""
     def __init__(self, nom: str, critere: list):
         self.nom = nom
         self.critere = critere
@@ -14,6 +16,8 @@ class Test_gen:
         return f"Test {self.nom} (critère {self.critere})"
 
     def val_max(self, feuille: Feuille, val_max: float):
+        """
+        Vérifie que les valeurs sont <= val_max"""
         # Vérifie que les valeurs sont >= val_max
         return self.valider_colonnes(
             feuille,
@@ -23,6 +27,8 @@ class Test_gen:
         )
 
     def val_min(self, feuille: Feuille, val_min: float):
+        """
+        Vérifie que les valeurs sont >= val_min"""
         # Vérifie que les valeurs sont <= val_min
         return self.valider_colonnes(
             feuille,
@@ -32,6 +38,8 @@ class Test_gen:
         )
 
     def val_entre(self, feuille: Feuille, val_min: float, val_max: float):
+        """
+        Vérifie que les valeurs sont  val_min <= x <= val_max"""
         # Vérifie que les valeurs sont entre val_min et val_max
         return self.valider_colonnes(
             feuille,
@@ -46,6 +54,8 @@ class Test_gen:
         condition: Callable[[pd.Series], pd.Series],
         message: str,                  # ce message sert à donner un contexte "valeurs entre", etc.
         erreur_message: str):
+        """
+        Valide les colonnes d'une feuille selon un critère donné."""
         erreurs = {}
         df = feuille.get_feuille()
         ligne_symbole = feuille.entete.ligne_unite

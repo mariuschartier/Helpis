@@ -6,6 +6,8 @@ from structure.Feuille import Feuille
 
 
 def split_excel_by_column(feuille :Feuille, column: int, output_file: str):
+    """
+    Sépare une feuille d'un fichier Excel en plusieurs feuilles basées sur les valeurs uniques d'une colonne spécifique."""
     input_file= feuille.fichier.chemin
     sheet_name = feuille.nom
 

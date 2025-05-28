@@ -1,6 +1,7 @@
 from openpyxl.styles import Font
 
 class Entete:
+    """ Représente l'entête d'une feuille Excel, permettant de manipuler les métadonnées de l'entête."""
     def __init__(self, feuille, entete_debut=0, entete_fin=1, nb_colonnes_secondaires=0, ligne_unite=1,structure = {}):
         self.feuille = feuille
         self.entete_debut = entete_debut
@@ -72,4 +73,23 @@ class Entete:
         return self.placement_colonne.keys()
             
 
-
+    def maj_entete(self, entete_debut: int=None,
+                        entete_fin: int=None,
+                        nb_colonnes_secondaires: int=None,
+                        ligne_unite : int=None,
+                        structure : dict=None):
+        """
+        Met à jour l'entête de la feuille cible avec les données de l'entête actuelle.
+        """
+        if isinstance(entete_debut, int):
+            self.entete_debut = entete_debut
+        if isinstance(entete_fin, int):
+            self.entete_fin = entete_fin
+        if isinstance(nb_colonnes_secondaires, int):
+            self.nb_colonnes_secondaires = nb_colonnes_secondaires
+        if isinstance(ligne_unite, int):
+            self.ligne_unite = ligne_unite
+        if isinstance(structure, dict):
+            self.structure = structure
+        self.taille_entete = self.entete_fin - self.entete_debut
+        self.placement_colonne = self.set_position()

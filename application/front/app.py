@@ -114,6 +114,7 @@ class ExcelTesterApp(tk.Frame):
 # Gestion du scroll =========================================================================================================
     
     def register_scrollable_widgets(self):
+        """Enregistre les widgets scrollables et lie le scroll de la souris."""
         scrollables = [
             self.test_listbox,
             self.result_text,
@@ -125,17 +126,21 @@ class ExcelTesterApp(tk.Frame):
                 self._bind_mousewheel_to_widget(widget)
                 
     def _disable_scroll_on_combo(self, widget):
+        """Désactive le scroll de la souris sur un widget spécifique."""
         widget.bind("<Enter>", lambda e: self.canvas.unbind_all("<MouseWheel>"))
         widget.bind("<Leave>", lambda e: self.canvas.bind_all("<MouseWheel>", self._on_mousewheel))
     
     def _bind_mousewheel_to_widget(self, widget):
+        """Lie le scroll de la souris à un widget spécifique."""
         widget.bind("<Enter>", lambda e: self._set_active_scroll_target(widget))
         widget.bind("<Leave>", lambda e: self._set_active_scroll_target(None))
     
     def _set_active_scroll_target(self, widget):
+        """Définit le widget actif pour le scroll de la souris."""
         self._active_mouse_scroll_target = widget
     
     def _on_mousewheel(self, event):
+        """Gère le scroll de la souris pour les widgets enregistrés."""
         target = getattr(self, "_active_mouse_scroll_target", None)
     
         if isinstance(target, (tk.Text, tk.Listbox, ttk.Treeview)):
@@ -149,8 +154,8 @@ class ExcelTesterApp(tk.Frame):
 # Frame =========================================================================================================
     
 # Champ de chargement du fichier et de l'entete
-
     def create_file_frame(self):
+        """Crée le cadre pour charger le fichier Excel et configurer l'en-tête."""
         self.file_frame = tk.LabelFrame(self.scrollable_frame, text="1. Charger un fichier Excel", bg="#f4f4f4")
         self.file_frame.pack(fill="both", expand=True, padx=10, pady=5)
     
@@ -184,6 +189,7 @@ class ExcelTesterApp(tk.Frame):
         """
         Met à jour la fin de l'en-tête 
         """
+
         # Mettre à jour la fin de l'en-tête
         self.details_structure["entete_fin"] = (
             int(self.taille_entete_entry.get()) + self.details_structure["entete_debut"] - 1
@@ -193,9 +199,15 @@ class ExcelTesterApp(tk.Frame):
         self.details_structure["ligne_unite"] = self.details_structure["entete_fin"]
         self.details_structure["data_debut"] = self.details_structure["entete_fin"]+1
 
+        self.enlever_toutes_couleurs()
+        self.colorier_lignes_range(
+            self.details_structure["entete_debut"],
+            self.details_structure["entete_fin"])
+
         self.dico_entete()
  
     def ouvrir_aide(self):
+        """Ouvre une fenêtre d'aide avec des instructions sur l'utilisation de l'application."""
         aide_popup = tk.Toplevel(self)
         aide_popup.title("Aide - Utilisation")
         aide_popup.geometry("600x400")
@@ -220,6 +232,7 @@ class ExcelTesterApp(tk.Frame):
         texte.insert(tk.END, contenu)
    
     def choisir_fichier(self):
+        """Ouvre un dialogue pour choisir un fichier Excel et charge les feuilles disponibles."""
         filepath = filedialog.askopenfilename(
             filetypes=[("Excel Files", "*.xlsx")],
             initialdir="results",  # Dossier de fichiers à convertir
@@ -237,16 +250,22 @@ class ExcelTesterApp(tk.Frame):
                 self.lien_fichier()
             except Exception as e:
                 messagebox.showerror("Erreur", f"Impossible de lire les feuilles du fichier : {e}")
-
     def lien_fichier(self):
+        """Crée un lien cliquable pour ouvrir le fichier, en supprimant le précédent si nécessaire."""
+        # Si le label existe déjà, le détruire avant d'en créer un nouveau
+        if hasattr(self, 'link_label') and self.link_label.winfo_exists():
+            self.link_label.destroy()
+
+        # Créer un nouveau label
         self.link_label = tk.Label(self.results_frame, text="Cliquez ici pour ouvrir le fichier",
             fg="blue", cursor="hand2", font=("Arial", 10, "underline"))
         self.link_label.pack(padx=10, pady=10)
 
-        # Bind le clic gauche à la fonction d'ouverture
+        # Bind le clic à la fonction d'ouverture
         self.link_label.bind("<Button-1>", lambda e: self.ouvrir_fichier(self.fichier_path))
 
     def ouvrir_fichier(self,chemin):
+        """Ouvre le fichier Excel dans le navigateur ou l'application par défaut."""
         # Chemin vers le fichier
         fichier = chemin
         # Vérifier si le fichier existe, sinon ouvrir via le navigateur
@@ -258,6 +277,7 @@ class ExcelTesterApp(tk.Frame):
     
     # Ouvrir le popup de manipulation de l'entete detaillée
     def ouvrir_popup_manipulation(self):
+        """Ouvre un popup pour configurer les paramètres avancés de la feuille."""
         if self.df is None:            
             messagebox.showerror("Erreur", "Un fichier doit etre selectionné.")
             return
@@ -309,8 +329,29 @@ class ExcelTesterApp(tk.Frame):
         ignore_lignes_vides = tk.BooleanVar(value=True)
         frame_cb = tk.Frame(popup, bg="#f4f4f4")
         frame_cb.pack(padx=10, pady=5, anchor="w")
-        tk.Checkbutton(frame_cb, text="Ignorer les lignes vides", variable=ignore_lignes_vides, bg="#f4f4f4").pack(side="left")
-    
+        tk.Checkbutton(popup, text="Ignorer les lignes vides", variable=ignore_lignes_vides, bg="#f4f4f4").pack(side="left")
+        def reset_valeur():
+            """Réinitialise les valeurs des champs à leurs valeurs par défaut."""
+            for key, entry in entries.items():
+                valeur_defaut = valeurs_par_defaut.get(key, "")
+                if key == "data_fin":
+                    try:
+                        entry.delete(0, tk.END)
+                        entry.insert(0, str(self.df.shape[0]))
+                    except AttributeError:
+                        entry.delete(0, tk.END)
+                        entry.insert(0, "")
+                else:
+                    entry.delete(0, tk.END)
+                    entry.insert(0, str(valeur_defaut))
+
+            ignore_lignes_vides.set(True)
+            
+        tk.Button(frame_cb, text="Réinitialisation", command=reset_valeur).pack(side="left", padx=10)
+
+
+            
+
         # ⚠️ Zone de message d'erreur
         label_erreur = tk.Label(popup, text="", fg="red", bg="#f4f4f4", font=("Segoe UI", 9, "italic"))
         label_erreur.pack(pady=5)
@@ -346,12 +387,14 @@ class ExcelTesterApp(tk.Frame):
                 return
         
             # Appliquer les valeurs
-            self.taille_entete_entry.delete(0, tk.END)
-            self.taille_entete_entry.insert(0, str(taille_entete))
+            
         
             # Optionnel : garder les valeurs pour un usage futur
             valeurs["ignorer_lignes_vides"] = ignore_lignes_vides.get()
             self.details_structure = valeurs
+
+            self.taille_entete_entry.delete(0, tk.END)
+            self.taille_entete_entry.insert(0, str(taille_entete))
             popup.destroy()
 
         tk.Button(frame_btns, text="✅ Appliquer", command=appliquer).pack(side="left", padx=10)
@@ -362,6 +405,7 @@ class ExcelTesterApp(tk.Frame):
 
 # Champs de test
     def create_test_buttons_frame(self):
+        """Crée le cadre pour les boutons de test."""
         frame_btn_test = tk.Frame(self.scrollable_frame)
         frame_btn_test.pack(fill="both", expand=True, padx=10, pady=5)
 
@@ -373,6 +417,7 @@ class ExcelTesterApp(tk.Frame):
         return frame_btn_test
 
     def create_test_list_frame(self):
+        """Crée le cadre pour la liste des tests."""
         self.test_list_frame = tk.LabelFrame(self.scrollable_frame, text="2. Liste des tests", bg="#f4f4f4")
         self.test_list_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
@@ -391,6 +436,7 @@ class ExcelTesterApp(tk.Frame):
         return self.test_list_frame
 
     def supprimer_test(self):
+        """Supprime le test sélectionné dans la liste des tests."""
         selection = self.test_listbox.curselection()
         if not selection:
             return
@@ -402,6 +448,7 @@ class ExcelTesterApp(tk.Frame):
         self.test_listbox.delete(*self.test_listbox.curselection())
     
     def sauvegarder_tests(self):
+        """Sauvegarde les tests dans un fichier JSON."""
         Path("sauvegardes_tests").mkdir(exist_ok=True)
         
         chemin = filedialog.asksaveasfilename(
@@ -455,6 +502,7 @@ class ExcelTesterApp(tk.Frame):
             json.dump(export, f, ensure_ascii=False, indent=2)      
     
     def importer_tests(self):
+        """Ouvre un dialogue pour importer des tests depuis un fichier JSON."""
         chemin = filedialog.askopenfilename(
             filetypes=[("JSON", "*.json")],
             initialdir="sauvegardes_tests",
@@ -523,6 +571,7 @@ class ExcelTesterApp(tk.Frame):
         print(self.tests)
 
     def afficher_details_popup(self, event):
+        """Affiche un popup avec les détails du test sélectionné dans la liste."""
         selection = self.test_listbox.curselection()
         if not selection:
             return
@@ -579,8 +628,9 @@ class ExcelTesterApp(tk.Frame):
 
 
 
-# Affichage des resultats des tests
+# Affichage de l'aperçu du fichier Excel
     def create_excel_preview_frame(self):
+        """Crée le cadre pour l'aperçu du fichier Excel."""
         # Créer un LabelFrame
         self.excel_preview_frame = tk.LabelFrame(self.scrollable_frame, text="3. Aperçu du fichier Excel", bg="#f4f4f4")
         self.excel_preview_frame.pack(fill="both", expand=True, padx=10, pady=5)
@@ -619,18 +669,18 @@ class ExcelTesterApp(tk.Frame):
             # Insérer avec le numéro de ligne (text=) et les valeurs
             self.table.insert("", "end", text=str(i + 1), values=values, tags=("ligne",))
 
-        # (Optionnel) Mettre la ligne en bleu (limite : toute la ligne)
-        # self.table.tag_configure("ligne", foreground="blue")
 
         return self.excel_preview_frame
 
     def on_treeview_configure(self, event):
+        """Ajuste la largeur du tableau pour ne pas dépasser 800 pixels."""
         # Limite la largeur à 800 pixels
         max_width = 800
         if self.table.winfo_width() > max_width:
             self.table.config(width=max_width)
 
     def afficher_excel(self):
+        """Affiche le contenu du fichier Excel dans le tableau."""
         try:
             # Vider les anciennes données
             self.table.delete(*self.table.get_children())
@@ -650,26 +700,86 @@ class ExcelTesterApp(tk.Frame):
             # Remplir le tableau
             for i, row in self.df.head(50).iterrows():
                 self.table.insert("", "end", text=str(i), values=list(row))
-
+            self.colorier_ligne(self.details_structure["entete_debut"])
         except Exception as e:
             messagebox.showerror("Erreur", f"Impossible de lire le fichier : {e}")
         self.dico_entete()
 
     def append_text(self, new_content, color="black"):
-            if not hasattr(self, "result_text"):
-                print("Erreur : 'result_text' n'a pas été initialisé.")
-                return
-            # Créer le tag uniquement s'il n'existe pas
-            if color not in self.result_text.tag_names():
-                self.result_text.tag_config(color, foreground=color)
-            # Insérer le texte avec le tag de couleur
-            self.result_text.insert("end", new_content + "\n", color)
-            self.result_text.see("end")
+        """Ajoute du texte à la zone de résultats sans le remplacer."""
+        if not hasattr(self, "result_text"):
+            print("Erreur : 'result_text' n'a pas été initialisé.")
+            return
+        # Créer le tag uniquement s'il n'existe pas
+        if color not in self.result_text.tag_names():
+            self.result_text.tag_config(color, foreground=color)
+        # Insérer le texte avec le tag de couleur
+        self.result_text.insert("end", new_content + "\n", color)
+        self.result_text.see("end")
 
+    def colorier_ligne(self, ligne_numero, couleur="#FFFF00"):
+        """
+        Applique une couleur de fond à la ligne spécifiée.
+        :param ligne_numero: le numéro de la ligne (1-based comme dans ton exemple)
+        :param couleur: couleur en hexadécimal (par exemple, "#FF0000" pour rouge)
+        """
+        # Créer un tag avec la couleur si pas encore créé
+        tag_name = f"ligne_{ligne_numero}"
+        if not hasattr(self, 'tags_configures'):
+            self.tags_configures = set()
+        if tag_name not in self.tags_configures:
+            self.table.tag_configure(tag_name, background=couleur)
+            self.tags_configures.add(tag_name)
+
+        # Parcourir tous les items pour trouver celui avec le texte correspondant
+        for item in self.table.get_children():
+            # Vérifier si le texte (le numéro de ligne) correspond
+            if self.table.item(item, "text") == str(ligne_numero):
+                # Appliquer le tag pour colorier la ligne
+                self.table.item(item, tags=(tag_name,))
+                break
+
+    def colorier_lignes_range(self, ligne_debut, ligne_fin, couleur="#FFFF00"):
+        """
+        Colorie toutes les lignes de ligne_debut à ligne_fin en utilisant la fonction colorier_ligne.
+        """
+        # S'assurer que ligne_debut est inférieur ou égal à ligne_fin
+        if ligne_debut > ligne_fin:
+            ligne_debut, ligne_fin = ligne_fin, ligne_debut
+
+        for ligne_numero in range(ligne_debut, ligne_fin + 1):
+            self.colorier_ligne(ligne_numero, couleur)
+
+    def enlever_toutes_couleurs(self):
+        """
+        Enlève la coloration de toutes les lignes.
+        """
+        for item in self.table.get_children():
+            # Récupérer tous les tags
+            tags = self.table.item(item, "tags")
+            # Filtrer pour enlever tous les tags de couleur
+            tags = tuple(tag for tag in tags if not tag.startswith("ligne_"))
+            self.table.item(item, tags=tags)
+
+    def enlever_couleur_ligne(self, ligne_numero):
+        """
+        Enlève la coloration de fond appliquée à la ligne spécifiée.
+        :param ligne_numero: le numéro de la ligne (1-based comme dans ton exemple)
+        """
+        for item in self.table.get_children():
+            if self.table.item(item, "text") == str(ligne_numero):
+                # Récupérer tous les tags de cette ligne
+                tags = self.table.item(item, "tags")
+                # Supprimer le tag de coloration spécifique
+                tags = tuple(tag for tag in tags if not tag.startswith("ligne_"))
+                # Mettre à jour l'item sans ces tags
+                self.table.item(item, tags=tags)
+                break
 
 
 # Champs de résultats
     def create_results_frame(self):
+        """Crée le cadre pour afficher les résultats des tests."""
         # Cadre pour les résultats du test
         self.results_frame = tk.LabelFrame(self, text="4. Résultats du test", bg="#f4f4f4")
         self.results_frame.pack(fill="both", expand=True, padx=10, pady=5)
@@ -711,6 +821,7 @@ class ExcelTesterApp(tk.Frame):
 
 # Affichage des détails des erreurs 
     def create_error_details_frame(self):
+        """Crée le cadre pour afficher les détails des erreurs."""
         self.error_details_frame = tk.LabelFrame(self.scrollable_frame, text="5. Détails des erreurs", bg="#f4f4f4")
         self.error_details_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
@@ -736,6 +847,7 @@ class ExcelTesterApp(tk.Frame):
 
 # Fonctionnalités d'initialisation et de préparation des dossiers =========================================================================================================
     def prepare_dossiers(self):
+        """Crée les dossiers nécessaires pour l'application."""
         Path("sauvegardes_tests").mkdir(exist_ok=True)
         Path("results").mkdir(exist_ok=True)
         Path("data").mkdir(exist_ok=True)
@@ -744,9 +856,13 @@ class ExcelTesterApp(tk.Frame):
 
 # Verification d'une entrée entière =========================================================================================================
     def validate_integer_input(self, P):
+        """
+        Valide si l'entrée est un entier positif ou vide.
+        """
         return P == "" or P.isdigit()
 
     def on_key_release_int(self, event):
+        """Valide l'entrée de la taille de l'en-tête pour s'assurer qu'elle est un entier positif."""
         if not self.taille_entete_entry.get().isdigit() and self.taille_entete_entry.get() != "":
             messagebox.showwarning("Validation", "Veuillez entrer un nombre entier.")
             self.taille_entete_entry.delete(0, tk.END)
@@ -754,6 +870,7 @@ class ExcelTesterApp(tk.Frame):
 
 # Construction de la structure de l'entête =========================================================================================================
     def dico_entete(self):
+        """Construit un dictionnaire représentant la structure de l'en-tête du fichier Excel."""
         self.dico_structure = {}
         ligne_entete_debut = self.details_structure.get("entete_debut", 0)
         ligne_entete_fin = self.details_structure.get("entete_fin", 1)
@@ -785,6 +902,7 @@ class ExcelTesterApp(tk.Frame):
 # Definition des tests =========================================================================================================
 
     def popup_ajouter_test_gen(self):
+        """Ouvre un popup pour ajouter un test générique."""
         popup = tk.Toplevel(self)
         popup.title("Ajouter un test générique")
         popup.grab_set()
@@ -867,6 +985,7 @@ class ExcelTesterApp(tk.Frame):
         tk.Button(popup, text="Ajouter le test", command=ajouter).grid(row=6, column=1, pady=10)
 
     def popup_ajouter_test_spe(self):
+        """Ouvre un popup pour ajouter un test spécifique."""
         try:
             dico = self.dico_entete()  # Assure que self.dico_structure est construit
         except Exception as e:

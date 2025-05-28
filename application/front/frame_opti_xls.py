@@ -19,6 +19,8 @@ class opti_xls(tk.Frame):
     Permet de convertir, améliorer, calculer des moyennes et séparer les données.
     """
     def __init__(self, parent, controller):
+        """
+        Initialise la page avec les éléments nécessaires pour manipuler les fichiers Excel."""
         super().__init__(parent)
         self.controller = controller
 
@@ -51,6 +53,9 @@ class opti_xls(tk.Frame):
 # Champ de chargement du fichier et de l'entete =========================================================================================================
 
     def choix_page(self):
+        """
+        Crée les champs pour charger un fichier Excel, choisir la feuille et la taille de l'en-tête.
+        """
         self.frame_fichier = tk.LabelFrame(self, text="1. Charger un fichier Excel", bg="#f4f4f4")
         self.frame_fichier.pack(fill="x", padx=10, pady=5)
 
@@ -72,9 +77,14 @@ class opti_xls(tk.Frame):
 
         self.taille_entete_entry.pack(side="left", padx=5)
         tk.Button(self.frame_fichier, text="❓ Aide", command=self.ouvrir_aide).pack(side="right", padx=5)
-        self.taille_entete_entry.bind("<KeyRelease>", self.on_key_release)
+        self.taille_entete_entry.bind("<KeyRelease>", self.on_key_release_int)
+
+        tk.Button(self.frame_fichier, text="detail", command=self.ouvrir_popup_manipulation).pack(side="right", padx=5)
+
         
     def choisir_fichier(self):
+        """
+        Ouvre une boîte de dialogue pour sélectionner un fichier Excel (.xls ou .xlsx)."""
         dossier_data = Path("results")
         dossier_data.mkdir(parents=True, exist_ok=True)  # Crée le dossier s’il n’existe pas
 
@@ -152,6 +162,9 @@ class opti_xls(tk.Frame):
                     messagebox.showerror("Erreur", f"Impossible de lire les feuilles du fichier :\n{e}")
 
     def ouvrir_aide(self):
+        """
+        Ouvre une fenêtre d'aide avec des instructions sur l'utilisation de l'application.
+        """
         aide_popup = tk.Toplevel(self)
         aide_popup.title("Aide - Utilisation")
         aide_popup.geometry("600x400")
@@ -203,8 +216,139 @@ class opti_xls(tk.Frame):
                 messagebox.showerror("Erreur", f"Impossible de mettre à jour les colonnes : {e}")        
 
 
+    # Ouvrir le popup de manipulation de l'entete detaillée
+    def ouvrir_popup_manipulation(self):
+        """Ouvre un popup pour configurer les paramètres avancés de la feuille."""
+        if self.df is None:            
+            messagebox.showerror("Erreur", "Un fichier doit etre selectionné.")
+            return
+        popup = tk.Toplevel(self)
+        popup.title("Paramètres avancés de la feuille")
+        popup.configure(bg="#f4f4f4")
+        popup.grab_set()
+
+        tk.Label(popup, text="Paramètres de lecture du fichier", font=("Segoe UI", 11, "bold"), bg="#f4f4f4").pack(pady=10)
+    
+        champs = [
+            ("Début de l'en-tête :", "entete_debut"),
+            ("Fin de l'en-tête :", "entete_fin"),
+            ("Début des données :", "data_debut"),
+            ("Fin des données :", "data_fin"),
+            ("Colonnes secondaires :", "nb_colonnes_secondaires"),
+            ("Ligne des unités :", "ligne_unite"),  # 🆕 Champ ajouté
+        ]
+    
+        entries = {}
+        valeurs_par_defaut = self.details_structure if hasattr(self, "details_structure") else {}
+    
+        for label, key in champs:
+            frame = tk.Frame(popup, bg="#f4f4f4")
+            frame.pack(fill="x", padx=10, pady=2)
+            tk.Label(frame, text=label, width=25, anchor="w", bg="#f4f4f4").pack(side="left")
+        
+            vcmd = (self.register(lambda val: val.isdigit() or val == ""), '%P')
+            entry = tk.Entry(frame, validate="key", validatecommand=vcmd)
+            entry.pack(side="left", fill="x", expand=True)
+            valeur_defaut = valeurs_par_defaut.get(key, "")
+            if key == "data_fin":
+                try:
+                    valeur_defaut = str(self.df.shape[0])  # Nombre de lignes du DataFrame
+                except AttributeError:
+                    messagebox.showwarning("Attention", "La feuille de données n'existe pas. La valeur de 'Fin des données' ne peut pas être déterminée.")
+                    valeur_defaut = ""
+            if key == "data_fin":
+                try:
+                    entry.insert(0, str(self.df.shape[0]))
+                except AttributeError:
+                    entry.insert(0, "")
+            else:
+                entry.insert(0, str(valeur_defaut))  # Initialise avec la valeur par défaut si disponible
+            
+            entries[key] = entry
+
+        # ✅ Check : ignorer lignes vides (coché par défaut)
+        ignore_lignes_vides = tk.BooleanVar(value=True)
+        frame_cb = tk.Frame(popup, bg="#f4f4f4")
+        frame_cb.pack(padx=10, pady=5, anchor="w")
+        tk.Checkbutton(popup, text="Ignorer les lignes vides", variable=ignore_lignes_vides, bg="#f4f4f4").pack(side="left")
+        def reset_valeur():
+            """Réinitialise les valeurs des champs à leurs valeurs par défaut."""
+            for key, entry in entries.items():
+                valeur_defaut = valeurs_par_defaut.get(key, "")
+                if key == "data_fin":
+                    try:
+                        entry.delete(0, tk.END)
+                        entry.insert(0, str(self.df.shape[0]))
+                    except AttributeError:
+                        entry.delete(0, tk.END)
+                        entry.insert(0, "")
+                else:
+                    entry.delete(0, tk.END)
+                    entry.insert(0, str(valeur_defaut))
+
+            ignore_lignes_vides.set(True)
+            
+        tk.Button(frame_cb, text="Réinitialisation", command=reset_valeur).pack(side="left", padx=10)
+
+
+            
+
+        # ⚠️ Zone de message d'erreur
+        label_erreur = tk.Label(popup, text="", fg="red", bg="#f4f4f4", font=("Segoe UI", 9, "italic"))
+        label_erreur.pack(pady=5)
+    
+        # ✅ Boutons
+        frame_btns = tk.Frame(popup, bg="#f4f4f4")
+        frame_btns.pack(pady=10)
+    
+        def appliquer():
+            try:
+                valeurs = {k: int(e.get()) for k, e in entries.items()}
+            except ValueError:
+                messagebox.showerror("Erreur", "Tous les champs doivent être remplis avec des entiers valides.")
+                return
+        
+            # Calcul automatique de la taille d’en-tête
+            taille_entete = valeurs["entete_fin"] - valeurs["entete_debut"] + 1
+            if taille_entete <= 0:
+                messagebox.showerror("Erreur", "L'entête doit contenir au moins une ligne.")
+                return
+        
+            # Vérification des contraintes
+            if valeurs["entete_fin"] >= valeurs["data_debut"]:
+                messagebox.showerror("Erreur", "La fin de l'entête doit être avant le début des données.")
+                return
+        
+            if valeurs["nb_colonnes_secondaires"] >= taille_entete:
+                messagebox.showerror("Erreur", "Le nombre de colonnes secondaires doit être inférieur à la taille de l'entête.")
+                return
+        
+            if not (valeurs["entete_debut"] <= valeurs["ligne_unite"] <= valeurs["entete_fin"]):
+                messagebox.showerror("Erreur", "La ligne d'unité doit être comprise dans l'entête.")
+                return
+        
+            # Appliquer les valeurs
+            
+        
+            # Optionnel : garder les valeurs pour un usage futur
+            valeurs["ignorer_lignes_vides"] = ignore_lignes_vides.get()
+            self.details_structure = valeurs
+
+            self.taille_entete_entry.delete(0, tk.END)
+            self.taille_entete_entry.insert(0, str(taille_entete))
+            popup.destroy()
+
+        tk.Button(frame_btns, text="✅ Appliquer", command=appliquer).pack(side="left", padx=10)
+        tk.Button(frame_btns, text="❌ Annuler", command=popup.destroy).pack(side="left", padx=10)
+
+
+
+
+
 # Champs de manipulation des fichiers xls et xlsx =========================================================================================================
     def champs_xls(self):
+        """
+        Crée les champs pour manipuler les fichiers Excel (.xls)."""
         frame_action = tk.LabelFrame(self, text="2. action sur le fichier xls", bg="#f4f4f4")
         frame_action.pack(fill="x", padx=10, pady=5)
     
@@ -213,6 +357,7 @@ class opti_xls(tk.Frame):
         self.btn_convertir.config(state="disabled")
 
     def champs_xlsx(self):
+        """"Crée les champs pour manipuler les fichiers Excel (.xlsx)."""
         frame_action = tk.LabelFrame(self, text="3. action sur le fichier xlsx", bg="#f4f4f4")
         frame_action.pack(fill="x", padx=10, pady=5)
 
@@ -233,6 +378,7 @@ class opti_xls(tk.Frame):
         self.btn_entete_une_ligne.config(state="disabled")
 
     def champs_separation(self):
+        """Crée les champs pour séparer les données d'un fichier Excel par une colonne choisie."""
         frame_action = tk.LabelFrame(self, text="4. Création de ficier séparer (xlsx)", bg="#f4f4f4")
         frame_action.pack(fill="x", padx=10, pady=5)
         self.btn_separation = tk.Button(frame_action, text="séparation valeur dans la colonne", command=self.controller.bind_button(self.split_excel_by_column))
@@ -244,23 +390,24 @@ class opti_xls(tk.Frame):
 
 # Préparation des dossiers de sauvegarde et de résultats =========================================================================================================
     def prepare_dossiers(self):
+        """Crée les dossiers nécessaires pour l'application."""
+
         Path("sauvegardes_tests").mkdir(exist_ok=True)
         Path("results").mkdir(exist_ok=True)
         Path("data").mkdir(exist_ok=True)
 
 # Validation de la taille de l'en-tête =========================================================================================================
-    def on_key_release(self, event):
+    def on_key_release_int(self, event):
+        """Valide l'entrée de la taille de l'en-tête pour s'assurer qu'elle est un entier positif."""
         if not self.taille_entete_entry.get().isdigit() and self.taille_entete_entry.get() != "":
             messagebox.showwarning("Validation", "Veuillez entrer un nombre entier.")
             self.taille_entete_entry.delete(0, tk.END)
 
 
-
-
-
-
 # Construction du dictionnaire d'en-tête =========================================================================================================
     def dico_entete(self,feuille=None):
+        """Construit un dictionnaire représentant la structure de l'en-tête du fichier Excel."""
+
         self.dico_structure = {}
         ligne_entete_debut = self.details_structure.get("entete_debut", 0)
         ligne_entete_fin = self.details_structure.get("entete_fin", 1)
@@ -288,16 +435,11 @@ class opti_xls(tk.Frame):
             return {}
    
 
-
-
-
-
-
-
-
 # Methodes de conversion et d'amélioration =========================================================================================================
 # convertir un fichier .xls en .xlsx
     def convertir_fichier(self):
+        """
+        Convertit un fichier Excel (.xls) en format moderne (.xlsx)."""
         if not self.fichier_path or not self.fichier_path.endswith(".xls"):
             messagebox.showerror("Erreur", "Veuillez d'abord sélectionner un fichier .xls valide.")
             return
@@ -323,6 +465,8 @@ class opti_xls(tk.Frame):
 
 # ameliorer un fichier .xlsx
     def ameliorer_fichier_xlsx(self):
+        """
+        Améliore un fichier Excel (.xlsx) en le formatant et en le nettoyant."""
         if not self.fichier_path or not self.fichier_path.endswith(".xlsx"):
             messagebox.showerror("Erreur", "Veuillez d'abord sélectionner un fichier .xlsx valide.")
             return
@@ -348,6 +492,7 @@ class opti_xls(tk.Frame):
 
 # Calculer la moyenne par jour
     def moyenne_par_jour(self):
+        """Calcule la moyenne des données par jour dans un fichier Excel (.xlsx)."""
         if not self.fichier_path or not self.fichier_path.endswith(".xlsx"):
             messagebox.showerror("Erreur", "Veuillez d'abord sélectionner un fichier .xlsx valide.")
             return
@@ -375,6 +520,7 @@ class opti_xls(tk.Frame):
 
 # Calculer la moyenne par semaine
     def moyenne_par_semaine(self):
+        """Calcule la moyenne des données par semaine dans un fichier Excel (.xlsx)."""
         if not self.fichier_path or not self.fichier_path.endswith(".xlsx"):
             messagebox.showerror("Erreur", "Veuillez d'abord sélectionner un fichier .xlsx valide.")
             return
@@ -402,6 +548,7 @@ class opti_xls(tk.Frame):
 
 # Séparer un fichier Excel par une colonne choisie
     def split_excel_by_column(self):
+        """Sépare un fichier Excel (.xlsx) en plusieurs fichiers basés sur les valeurs d'une colonne choisie."""
         fichier = Fichier(self.fichier_path)
         feuille = Feuille(fichier, self.feuille_nom.get(),
                           self.details_structure["data_debut"],
@@ -539,6 +686,7 @@ class opti_xls(tk.Frame):
 
 # Créer un fichier avec l'en-tête en une seule ligne
     def entete_une_ligne(self):
+        """Crée un fichier Excel (.xlsx) avec l'en-tête en une seule ligne."""
         if not self.fichier_path or not self.fichier_path.endswith(".xlsx"):
             messagebox.showerror("Erreur", "Veuillez d'abord sélectionner un fichier .xlsx valide.")
             return

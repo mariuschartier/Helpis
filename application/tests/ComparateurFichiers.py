@@ -8,15 +8,21 @@ from structure.Entete import Entete
 
 
 class ComparateurFichiers:
+    """
+    Classe pour comparer des fichiers Excel et effectuer des tests statistiques."""
     def __init__(self):
-        self.feuille =None
+        self.feuille :Feuille = None
 
 
     def ajouter_feuille(self, feuille):
+        """
+        Ajoute une feuille à comparer."""
         self.feuille = feuille
 
 
     def collecter_donnees(self, colonne: str):
+        """Collecte les données d'une colonne spécifique dans la feuille active.
+        - colonne: nom complet de la colonne (chemin)"""
         datas = []
 
         try:
@@ -39,8 +45,6 @@ class ComparateurFichiers:
             raise ValueError("❌ Aucune donnée valide à concaténer. Vérifiez les feuilles ajoutées ou les filtres.")
 
         return pd.concat(datas, ignore_index=True)
-
-
 
 
     def tester_normalite(self, colonne, methode="shapiro", seuil=0.05):
@@ -74,10 +78,6 @@ class ComparateurFichiers:
         except Exception as e:
             print(f"Erreur dans tester_normalite: {e}")
             return {"stat": None, "p_value": None, "normal": False}
-
-
-
-
 
 
     def tester_homogeneite_variances(self, variable: str, groupe: str, methode="levene", seuil=0.05):

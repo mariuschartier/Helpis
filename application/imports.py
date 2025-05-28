@@ -1,3 +1,5 @@
+"""
+### This file is used to import all the necessary libraries for the project."""
 from tests import fonctions  as fn
 fn.install_and_import('pandas')
 fn.install_and_import('json')

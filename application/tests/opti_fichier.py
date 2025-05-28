@@ -5,12 +5,17 @@ from pathlib import Path
 import chardet
 
 def fichier_du_chemin(chemin: str) -> str:
+    """
+    Extrait le nom du fichier sans l'extension à partir d'un chemin donné."""
     return Path(chemin).stem
 
 def exist_file(file_path: str) -> bool:
+    """
+    Vérifie si un fichier existe à l'emplacement spécifié."""
     return Path(file_path).is_file()
 
 def format_datetime(dt):
+    """Formate un objet datetime en chaîne de caractères au format 'JJ-MM-AA_HH-MM'."""
     return dt.strftime("%d-%m-%y_%H-%M")
 
 def nb_colonne(table):
@@ -35,18 +40,24 @@ def nb_colonne(table):
     return total_columns
 
 def excel_date_to_datetime(date):
+    """
+    Convertit une date Excel (sous forme de chaîne) en objet datetime."""
     excel_date = float(date.replace(",", "."))
     excel_epoch_start = datetime(1899, 12, 30)
     delta = timedelta(days=excel_date)
     return format_datetime(excel_epoch_start + delta)
 
 def detect_encoding(file_path: str) -> str:
+    """
+    Détecte l'encodage d'un fichier en lisant les premiers 10 000 octets."""
     with open(file_path, 'rb') as file:
         rawdata = file.read(10000)
         result = chardet.detect(rawdata)
         return result['encoding']
 
 def opti_html_to_xlsx(file_path: str, name=""):
+    """
+    Convertit un fichier HTML contenant une table en fichier Excel (.xlsx)."""
     if name == "":
         name = fichier_du_chemin(file_path)
 

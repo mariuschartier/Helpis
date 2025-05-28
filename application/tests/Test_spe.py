@@ -8,6 +8,8 @@ from structure.Feuille import Feuille
 
 
 class Test_spe:
+    """
+    Classe de base pour les tests spécifiques sur les feuilles d'un fichier Excel."""
     def __init__(self, nom: str, feuille: Feuille):
         self.nom = nom
         self.feuille = feuille
@@ -24,6 +26,8 @@ class Test_spe:
 
 
     def val_max(self, val_max: float, colonne: str):
+        """
+        Vérifie que les valeurs sont <= val_max"""
         return self.valider_colonne(
             colonne=colonne,
             condition=lambda x: x <= val_max,
@@ -32,6 +36,8 @@ class Test_spe:
             )
 
     def val_min(self, val_min: float, colonne: str):
+        """
+        Vérifie que les valeurs sont >= val_max"""
         return self.valider_colonne(
             colonne=colonne,
             condition=lambda x: x >= val_min,
@@ -40,6 +46,8 @@ class Test_spe:
         )
 
     def val_entre(self, val_min: float, val_max: float, colonne: str):
+        """
+        Vérifie que les valeurs sont  val_min <= x <= val_max"""
         return self.valider_colonne(
             colonne=colonne,
             condition=lambda x: (x >= val_min) & (x <= val_max),
@@ -49,6 +57,7 @@ class Test_spe:
         )
     
     def compare_col_fix(self, difference: float, colonne1: str,colonne2: str):
+        """Compare deux colonnes pour vérifier si la différence absolue est supérieure à une valeur fixe."""
         return self.valider_comparaison(
             colonne1=colonne1,
             colonne2=colonne2,
@@ -58,7 +67,8 @@ class Test_spe:
         )
     
     def compare_col_ratio(self, ratio: float, colonne1: str,colonne2: str):
-        print(f"ratio : {ratio}")
+        """Compare deux colonnes pour vérifier si la différence absolue est supérieure à un ratio de la deuxième colonne."""
+        # print(f"ratio : {ratio}")
         return self.valider_comparaison(
             colonne1=colonne1,
             colonne2=colonne2,
@@ -69,6 +79,8 @@ class Test_spe:
     
 
     def valider_colonne(self, colonne: str, condition, message: str, erreur_message: str):
+        """
+        Valide une colonne d'une feuille selon un critère donné."""
         erreurs = {}
         message_final = ""
         try:
@@ -134,6 +146,8 @@ class Test_spe:
         return message_final
     
     def valider_comparaison(self, colonne1: str,colonne2: str, condition, message: str, erreur_message: str):
+        """
+        Valide la comparaison entre deux colonnes d'une feuille selon un critère donné."""
         erreurs = {}
         message_final = ""
         try:
@@ -213,147 +227,4 @@ class Test_spe:
         return message_final
     
     
-    # def compare_col_fix(self, diff: int, colonne1: str, colonne2: str):
-    #     erreurs = {}
-    #     message_final = ""
-    #     try:
-    #         df = self.feuille.get_feuille()
-    #     except Exception as e:
-    #         msg_tmp = f"Erreur lors de la lecture du fichier : {e}"
-    #         message_final+= msg_tmp
-    #         print(msg_tmp)
-    #         return
-
-    #     for colonne in [colonne1, colonne2]:
-    #         if colonne not in df.iloc[0, :].values:
-    #             msg_tmp = f"La colonne '{colonne}' n'existe pas dans le fichier."
-    #             message_final+= msg_tmp
-    #             raise ValueError(msg_tmp)
-
-    #     col_1_index = df.iloc[0, :].tolist().index(colonne1)
-    #     col_2_index = df.iloc[0, :].tolist().index(colonne2)
-    #     ligne_data = self.feuille.debut_data
-        
-    #     valeurs_col_1 = pd.to_numeric(df.loc[ligne_data:, col_1_index], errors='coerce')
-    #     valeurs_col_2 = pd.to_numeric(df.loc[ligne_data:, col_2_index], errors='coerce')
-
-    #     ecarts = abs(valeurs_col_1 - valeurs_col_2)
-    #     masque_erreurs = ecarts > diff
-
-    #     df_erreurs = pd.DataFrame({
-    #         colonne1: valeurs_col_1[masque_erreurs],
-    #         colonne2: valeurs_col_2[masque_erreurs],
-    #         'Écart absolu': ecarts[masque_erreurs]
-    #     })
-
-    #     if not df_erreurs.empty:
-    #         erreurs[f"{colonne1} vs {colonne2}"] = df_erreurs
-    #         msg_tmp = f"❌ Erreurs détectées entre '{colonne1}' et '{colonne2}' (écart > {diff}) :"
-    #         message_final+= msg_tmp
-    #         print(msg_tmp)
-    #         print(df_erreurs)
-            
-    #         # 💾 Ajout dans self.erreurs pour chaque colonne impliquée
-    #         lignes_fautives = df_erreurs.index.tolist()
-    #         self.feuille.ajouts_erreur(lignes_fautives, col_1_index,2)
-    #         self.feuille.ajouts_erreur(lignes_fautives, col_2_index,2)
-    #     else:
-    #         msg_tmp = f"✅ Toutes les valeurs entre '{colonne1}' et '{colonne2}' sont valides.\n"
-    #         message_final+= msg_tmp
-    #         print(msg_tmp)
-
-    #     if not erreurs:
-    #         msg_tmp = "\n🎉 Aucune erreur trouvée.\n"
-    #         message_final+= msg_tmp
-    #         print(msg_tmp)
-    #     else:
-    #         msg_tmp = "\n🛑 Des erreurs ont été détectées :"
-    #         message_final+= msg_tmp
-    #         print(msg_tmp)
-    #         for col, err in erreurs.items():
-    #             msg_tmp = f"- Comparaison '{col}' : {len(err)} lignes concernées.\n"
-    #             message_final+= msg_tmp
-    #             print(msg_tmp)
-    #     print("======================================================================================= \n")
-    #     return message_final
-    
-    # def compare_col_ratio(self, ratio: float, colonne1: str, colonne2: str):
-    #     erreurs = {}
-    #     message_final = ""
-    #     try:
-    #         df = self.feuille.get_feuille()
-    #     except Exception as e:
-    #         msg_tmp = f"Erreur lors de la lecture du fichier : {e}"
-    #         print(msg_tmp)
-    #         message_final += msg_tmp
-    #         return
-
-    #     for colonne in [colonne1, colonne2]:
-    #         if colonne not in df.iloc[0, :].values:
-    #             msg_tmp = f"La colonne '{colonne}' n'existe pas dans le fichier."
-    #             message_final += msg_tmp
-    #             raise ValueError(msg_tmp)
-                
-
-    #     col_1_index = df.iloc[0, :].tolist().index(colonne1)
-    #     col_2_index = df.iloc[0, :].tolist().index(colonne2)
-    #     ligne_data = self.feuille.entete.taille_entete
-
-    #     valeurs_col_1 = pd.to_numeric(df.loc[ligne_data:, col_1_index], errors='coerce')
-    #     valeurs_col_2 = pd.to_numeric(df.loc[ligne_data:, col_2_index], errors='coerce')
-
-    #     ecarts = abs(valeurs_col_1 - valeurs_col_2)
-    #     ecart_accepte = valeurs_col_2 * ratio
-    #     masque_erreurs = ecarts > ecart_accepte
-
-    #     df_erreurs = pd.DataFrame({
-    #         colonne1: valeurs_col_1[masque_erreurs],
-    #         colonne2: valeurs_col_2[masque_erreurs],
-    #         'Écart absolu': ecarts[masque_erreurs],
-    #         'Écart accepté': ecart_accepte[masque_erreurs]
-    #     })
-
-    #     if not df_erreurs.empty:
-    #         erreurs[f"{colonne1} vs {colonne2}"] = df_erreurs
-    #         msg_tmp = f"❌ Erreurs détectées entre '{colonne1}' et '{colonne2}' (écart > {ratio}x {colonne2}) :"
-    #         print(msg_tmp)
-    #         print(df_erreurs)
-    #         # 💾 Ajout dans self.erreurs pour chaque colonne impliquée
-    #         lignes_fautives = df_erreurs.index.tolist()
-    #         self.feuille.ajouts_erreur(lignes_fautives, col_1_index,2)
-    #         self.feuille.ajouts_erreur(lignes_fautives, col_2_index,2)
-    #     else:
-    #         msg_tmp = f"✅ Toutes les valeurs entre '{colonne1}' et '{colonne2}' respectent le ratio.\n"
-    #         message_final += msg_tmp
-    #         print(msg_tmp)
-
-    #     if not erreurs:
-    #         msg_tmp = "\n🎉 Aucune erreur trouvée.\n"
-    #         message_final += msg_tmp
-    #         print(msg_tmp)
-    #     else:
-    #         msg_tmp = "\n🛑 Des erreurs ont été détectées :"
-    #         message_final += msg_tmp
-
-    #         print(msg_tmp)
-    #         for col, err in erreurs.items():
-    #             msg_tmp = f"- Comparaison '{col}' : {len(err)} lignes concernées.\n"
-    #             message_final += msg_tmp
-
-    #             print(msg_tmp)
-    #     print("======================================================================================= \n")
-    #     return message_final
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+  

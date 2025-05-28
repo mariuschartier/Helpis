@@ -22,6 +22,11 @@ class ComparePage(tk.Frame):
     de sélectionner des tests statistiques et d'afficher les résultats.
     """
     def __init__(self, parent, controller):
+        """ Initialise la page de comparaison.
+        Args:
+            parent (tk.Frame): Le parent de cette page.
+            controller (Controller): Le contrôleur de l'application.
+        """
         super().__init__(parent, bg="#f4f4f4")
         self.controller = controller
         self.comparateur = ComparateurFichiers()
@@ -59,6 +64,8 @@ class ComparePage(tk.Frame):
 # frame de test ==========================================================
 # Champ de chargement du fichier et de l'entete
     def create_file_frame(self):
+        """ Crée le cadre pour le chargement du fichier Excel et la sélection de l'en-tête.
+        """
         self.file_frame = tk.LabelFrame(self, text="1. Charger un fichier Excel", bg="#f4f4f4")
         self.file_frame.pack(fill="x", padx=10, pady=5)
 
@@ -81,7 +88,7 @@ class ComparePage(tk.Frame):
 
         self.taille_entete_entry.pack(side="left", padx=5)
         tk.Button(self.file_frame, text="❓ Aide", command=self.ouvrir_aide).pack(side="right", padx=5)
-        self.taille_entete_entry.bind("<KeyRelease>", self.on_key_release)
+        self.taille_entete_entry.bind("<KeyRelease>", self.on_key_release_int)
  
         tk.Button(self.file_frame, text="detail", command=self.ouvrir_popup_manipulation).pack(side="right", padx=5)
 
@@ -100,16 +107,118 @@ class ComparePage(tk.Frame):
         self.details_structure["ligne_unite"] = self.details_structure["entete_fin"]
         self.details_structure["data_debut"] = self.details_structure["entete_fin"]+1
 
+        self.enlever_toutes_couleurs()
+        self.colorier_lignes_range(
+            self.details_structure["entete_debut"],
+            self.details_structure["entete_fin"])
+
         self.dico_entete()
+
+
+    def choisir_fichier(self):
+        """ Ouvre une boîte de dialogue pour sélectionner un fichier Excel et charge la feuille sélectionnée.
+        """
+        path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
+        if not path:
+            return
+        self.fichier_path = path
+        self.fichier_entry.delete(0, tk.END)
+        self.fichier_entry.insert(0, path)
+
+        try:
+            xls = pd.ExcelFile(path)
+            self.feuille_combo["values"] = xls.sheet_names
+            self.feuille_combo.set(xls.sheet_names[0])
+            self.ajouter_feuille()
+            self.afficher_excel()
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur de lecture du fichier : {e}")
+               
+    def maj_feuille(self):
+        """ Met à jour la feuille avec les détails de la structure et l'ajoute au comparateur."""
+        fichier = Fichier(self.fichier_path)
+        
+        self.comparateur.feuille.maj_feuille(fichier=fichier,
+                                             nom=self.feuille_nom.get(),
+                                             debut_data=self.details_structure["data_debut"],
+                                             fin_data=self.details_structure["data_fin"]) 
+
+        self.comparateur.feuille.entete.maj_entete(
+                        entete_debut=self.details_structure["entete_debut"],
+                        entete_fin=self.details_structure["entete_fin"],
+                        nb_colonnes_secondaires=self.details_structure["nb_colonnes_secondaires"],
+                        ligne_unite=self.details_structure["ligne_unite"],
+                        structure=self.dico_structure)
+
+        
+    def ajouter_feuille(self):
+        """ Ajoute la feuille sélectionnée au comparateur."""
+        try:
+            if not self.fichier_path or not self.feuille_nom.get() or not self.taille_entete_entry.get().isdigit():
+                messagebox.showwarning("Champs manquants", "Veuillez renseigner le fichier, la feuille et la taille d'en-tête.")
+                return
+            
+            fichier = Fichier(self.fichier_path)
+            feuille = Feuille(fichier, self.feuille_nom.get(),
+                            self.details_structure["data_debut"],
+                            self.details_structure["data_fin"],)
+            entete = Entete(feuille,self.details_structure["entete_debut"],
+                            self.details_structure["entete_fin"],
+                            self.details_structure["nb_colonnes_secondaires"],
+                            self.details_structure["ligne_unite"],
+                            self.dico_structure
+                            )
+            feuille.entete = entete
+            self.comparateur.ajouter_feuille(feuille)
+            messagebox.showinfo("Ajout réussi", f"La feuille a été ajoutée au comparateur.")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Impossible d'ajouter la feuille : {e}")
     
+    def ouvrir_aide(self):
+        """ Ouvre une fenêtre d'aide avec des instructions sur l'utilisation de l'application."""
+        aide_popup = tk.Toplevel(self)
+        aide_popup.title("Aide - Utilisation")
+        aide_popup.geometry("600x400")
+
+        texte = tk.Text(aide_popup, wrap="word", font=("Segoe UI", 10))
+        texte.pack(fill="both", expand=True, padx=10, pady=10)
+
+        contenu = (
+            "🔍 Bienvenue dans l'application Testeur Excel\n\n"
+            "Voici comment utiliser l'application :\n"
+
+            "1 - Charger un fichier Excel :\n"
+            "   - Cliquez sur le bouton 'Parcourir' pour sélectionner un fichier Excel.\n"
+            "   - Sélectionnez la feuille à analyser dans le menu déroulant.\n"
+            "   - Ajustez la taille de l'en-tête si nécessaire (par défaut 1).\n"
+            "2 - Aperçu du fichier Excel :\n"
+            "   - Un aperçu du fichier Excel s'affiche dans la zone prévue à cet effet.\n"
+            "   - Vous pouvez faire défiler le tableau pour voir les données.\n"
+            "3 - Sélection et exécution de tests statistiques :\n"
+            "   - Choisissez le type de test statistique à exécuter dans le menu déroulant.\n"
+            "   - Sélectionnez la méthode appropriée pour le test choisi.\n"
+            "   - Si nécessaire, sélectionnez la variable et le groupe à analyser.\n"
+            "   - Cliquez sur le bouton 'Exécuter le test' pour lancer l'analyse.\n"
+            "4 - Résultats du test :\n"
+            "   - Les résultats du test s'affichent dans la zone de résultats.\n"
+            "   - Les résultats incluent la statistique du test, la valeur p et une indication de la significativité.\n"
+            "   - Vous pouvez également tracer des courbes pour visualiser les données.\n\n"
+        
+        )
+        
+        texte.insert(tk.END, contenu)
+
+    # Ouvrir le popup de manipulation de l'entete detaillée
     def ouvrir_popup_manipulation(self):
+        """Ouvre un popup pour configurer les paramètres avancés de la feuille."""
         if self.df is None:            
             messagebox.showerror("Erreur", "Un fichier doit etre selectionné.")
             return
         popup = tk.Toplevel(self)
         popup.title("Paramètres avancés de la feuille")
         popup.configure(bg="#f4f4f4")
-    
+        popup.grab_set()
+
         tk.Label(popup, text="Paramètres de lecture du fichier", font=("Segoe UI", 11, "bold"), bg="#f4f4f4").pack(pady=10)
     
         champs = [
@@ -153,8 +262,29 @@ class ComparePage(tk.Frame):
         ignore_lignes_vides = tk.BooleanVar(value=True)
         frame_cb = tk.Frame(popup, bg="#f4f4f4")
         frame_cb.pack(padx=10, pady=5, anchor="w")
-        tk.Checkbutton(frame_cb, text="Ignorer les lignes vides", variable=ignore_lignes_vides, bg="#f4f4f4").pack(side="left")
-    
+        tk.Checkbutton(popup, text="Ignorer les lignes vides", variable=ignore_lignes_vides, bg="#f4f4f4").pack(side="left")
+        def reset_valeur():
+            """Réinitialise les valeurs des champs à leurs valeurs par défaut."""
+            for key, entry in entries.items():
+                valeur_defaut = valeurs_par_defaut.get(key, "")
+                if key == "data_fin":
+                    try:
+                        entry.delete(0, tk.END)
+                        entry.insert(0, str(self.df.shape[0]))
+                    except AttributeError:
+                        entry.delete(0, tk.END)
+                        entry.insert(0, "")
+                else:
+                    entry.delete(0, tk.END)
+                    entry.insert(0, str(valeur_defaut))
+
+            ignore_lignes_vides.set(True)
+            
+        tk.Button(frame_cb, text="Réinitialisation", command=reset_valeur).pack(side="left", padx=10)
+
+
+            
+
         # ⚠️ Zone de message d'erreur
         label_erreur = tk.Label(popup, text="", fg="red", bg="#f4f4f4", font=("Segoe UI", 9, "italic"))
         label_erreur.pack(pady=5)
@@ -190,117 +320,158 @@ class ComparePage(tk.Frame):
                 return
         
             # Appliquer les valeurs
-            self.taille_entete_entry.delete(0, tk.END)
-            self.taille_entete_entry.insert(0, str(taille_entete))
+            
         
             # Optionnel : garder les valeurs pour un usage futur
             valeurs["ignorer_lignes_vides"] = ignore_lignes_vides.get()
             self.details_structure = valeurs
+
+            self.taille_entete_entry.delete(0, tk.END)
+            self.taille_entete_entry.insert(0, str(taille_entete))
             popup.destroy()
 
         tk.Button(frame_btns, text="✅ Appliquer", command=appliquer).pack(side="left", padx=10)
         tk.Button(frame_btns, text="❌ Annuler", command=popup.destroy).pack(side="left", padx=10)
 
-    def choisir_fichier(self):
-        path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
-        if not path:
-            return
-        self.fichier_path = path
-        self.fichier_entry.delete(0, tk.END)
-        self.fichier_entry.insert(0, path)
-
-        try:
-            xls = pd.ExcelFile(path)
-            self.feuille_combo["values"] = xls.sheet_names
-            self.feuille_combo.set(xls.sheet_names[0])
-            self.ajouter_feuille()
-            self.afficher_excel()
-        except Exception as e:
-            messagebox.showerror("Erreur", f"Erreur de lecture du fichier : {e}")
-
-                
-    def maj_feuille(self):
-        fichier = Fichier(self.fichier_path)
-        feuille = Feuille(fichier, self.feuille_nom.get(),
-                        self.details_structure["data_debut"],
-                        self.details_structure["data_fin"],)
-        entete = Entete(feuille,self.details_structure["entete_debut"],
-                        self.details_structure["entete_fin"],
-                        self.details_structure["nb_colonnes_secondaires"],
-                        self.details_structure["ligne_unite"],
-                        self.dico_structure
-                        )
-        feuille.entete = entete
-        self.comparateur.ajouter_feuille(feuille)
-
-
-
-
-    def ajouter_feuille(self):
-        try:
-            if not self.fichier_path or not self.feuille_nom.get() or not self.taille_entete_entry.get().isdigit():
-                messagebox.showwarning("Champs manquants", "Veuillez renseigner le fichier, la feuille et la taille d'en-tête.")
-                return
-            
-            self.maj_feuille()
-            messagebox.showinfo("Ajout réussi", f"La feuille a été ajoutée au comparateur.")
-        except Exception as e:
-            messagebox.showerror("Erreur", f"Impossible d'ajouter la feuille : {e}")
-        
 
 
 # Affichage du fichier Excel dans le tableau ====================================================================================================================
     def afficher_excel(self):
-        if not self.fichier_path or not self.feuille_nom.get():
-            return
+        """Affiche le contenu du fichier Excel dans le tableau."""
         try:
-            self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None)
+            # Vider les anciennes données
             self.table.delete(*self.table.get_children())
-            self.table["columns"] = list(range(len(self.df.columns)))
-            for col in self.table["columns"]:
-                self.table.heading(col, text=f"Col {col}")
-                # Fixez la largeur à 50 pixels (ou autre valeur minimale souhaitée)
-                self.table.column(col, width=100, minwidth=100)
-            for i, row in self.df.head(20).iterrows():
-                self.table.insert("", "end", values=list(row))
 
-            self.dico_entete()
+            # Lire le fichier Excel
+            self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None)
+            nb_cols = len(self.df.columns)
+            col_names = [f"Col {i+1}" for i in range(nb_cols)]
 
+            # Réinitialiser les colonnes
+            self.table["columns"] = col_names
+
+            for name in col_names:
+                self.table.heading(name, text=name)
+                self.table.column(name, anchor="center", width=120, minwidth=100, stretch=True)
+
+            # Remplir le tableau
+            for i, row in self.df.head(50).iterrows():
+                self.table.insert("", "end", text=str(i), values=list(row))
+            self.colorier_ligne(self.details_structure["entete_debut"])
         except Exception as e:
-            messagebox.showerror("Erreur", f"Erreur d'affichage : {e}")
+            messagebox.showerror("Erreur", f"Impossible de lire le fichier : {e}")
+        self.dico_entete()
 
     def create_excel_preview_frame(self):
-        self.excel_preview_frame = tk.LabelFrame(self, text="2. Aperçu du fichier Excel", bg="#f4f4f4")
-        self.excel_preview_frame.pack(padx=10, pady=5, fill='both', expand=True)
-        self.excel_preview_frame.pack_propagate(False)
+        """Crée le cadre pour l'aperçu du fichier Excel."""
+        # Créer un LabelFrame
+        self.excel_preview_frame = tk.LabelFrame(self, text="3. Aperçu du fichier Excel", bg="#f4f4f4")
+        self.excel_preview_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-         # Créer le Treeview directement dans le LabelFrame
-        self.table = ttk.Treeview(self.excel_preview_frame, show='headings', height=5)
-        self.table.grid(row=0, column=0, sticky='nsew')
-
+        # Créer le Treeview avec une colonne pour les numéros de ligne
+        self.table = ttk.Treeview(self.excel_preview_frame, show="tree headings", height=15)
+        self.table.grid(row=0, column=0, sticky="nsew")
 
         # Scrollbars attachées au LabelFrame
         scroll_y = tk.Scrollbar(self.excel_preview_frame, orient="vertical", command=self.table.yview)
         scroll_y.grid(row=0, column=1, sticky='ns')
         self.table.configure(yscrollcommand=scroll_y.set)
-        
+
         scroll_x = tk.Scrollbar(self.excel_preview_frame, orient="horizontal", command=self.table.xview)
         scroll_x.grid(row=1, column=0, sticky='ew')
         self.table.configure(xscrollcommand=scroll_x.set)
-        
+
         # Configurer la grille pour que le tableau prenne l'espace
         self.excel_preview_frame.grid_rowconfigure(0, weight=1)
         self.excel_preview_frame.grid_columnconfigure(0, weight=1)
-        
-        # Configuration des colonnes
-        self.table["columns"] = list(range(15))
-        for col in range(15):
-            self.table.heading(col, text=f"Col {col}")
-            self.table.column(col, width=100)
+
+        # Exemple de colonnes (15 colonnes de données)
+        nb_cols = 15
+        col_names = [f"Col {i+1}" for i in range(nb_cols)]
+        self.table["columns"] = col_names
+
+        self.table.heading("#0", text="Ligne", anchor="center")
+        self.table.column("#0", width=40, minwidth=30, anchor="center", stretch=False)
+        for name in col_names:
+            self.table.heading(name, text=name)
+            self.table.column(name, anchor="center", width=120, minwidth=100, stretch=True)
+
+        # Exemple de remplissage avec numéros de ligne et valeurs fictives
+        for i in range(50):
+            values = [f"Valeur {j+1}" for j in range(nb_cols)]
+            # Insérer avec le numéro de ligne (text=) et les valeurs
+            self.table.insert("", "end", text=str(i + 1), values=values, tags=("ligne",))
+
+
+        return self.excel_preview_frame
+
+    def colorier_ligne(self, ligne_numero, couleur="#FFFF00"):
+        """
+        Applique une couleur de fond à la ligne spécifiée.
+        :param ligne_numero: le numéro de la ligne (1-based comme dans ton exemple)
+        :param couleur: couleur en hexadécimal (par exemple, "#FF0000" pour rouge)
+        """
+        # Créer un tag avec la couleur si pas encore créé
+        tag_name = f"ligne_{ligne_numero}"
+        if not hasattr(self, 'tags_configures'):
+            self.tags_configures = set()
+        if tag_name not in self.tags_configures:
+            self.table.tag_configure(tag_name, background=couleur)
+            self.tags_configures.add(tag_name)
+
+        # Parcourir tous les items pour trouver celui avec le texte correspondant
+        for item in self.table.get_children():
+            # Vérifier si le texte (le numéro de ligne) correspond
+            if self.table.item(item, "text") == str(ligne_numero):
+                # Appliquer le tag pour colorier la ligne
+                self.table.item(item, tags=(tag_name,))
+                break
+
+    def colorier_lignes_range(self, ligne_debut, ligne_fin, couleur="#FFFF00"):
+        """
+        Colorie toutes les lignes de ligne_debut à ligne_fin en utilisant la fonction colorier_ligne.
+        """
+        # S'assurer que ligne_debut est inférieur ou égal à ligne_fin
+        if ligne_debut > ligne_fin:
+            ligne_debut, ligne_fin = ligne_fin, ligne_debut
+
+        for ligne_numero in range(ligne_debut, ligne_fin + 1):
+            self.colorier_ligne(ligne_numero, couleur)
+
+    def enlever_toutes_couleurs(self):
+        """
+        Enlève la coloration de toutes les lignes.
+        """
+        for item in self.table.get_children():
+            # Récupérer tous les tags
+            tags = self.table.item(item, "tags")
+            # Filtrer pour enlever tous les tags de couleur
+            tags = tuple(tag for tag in tags if not tag.startswith("ligne_"))
+            self.table.item(item, tags=tags)
+
+    def enlever_couleur_ligne(self, ligne_numero):
+        """
+        Enlève la coloration de fond appliquée à la ligne spécifiée.
+        :param ligne_numero: le numéro de la ligne (1-based comme dans ton exemple)
+        """
+        for item in self.table.get_children():
+            if self.table.item(item, "text") == str(ligne_numero):
+                # Récupérer tous les tags de cette ligne
+                tags = self.table.item(item, "tags")
+                # Supprimer le tag de coloration spécifique
+                tags = tuple(tag for tag in tags if not tag.startswith("ligne_"))
+                # Mettre à jour l'item sans ces tags
+                self.table.item(item, tags=tags)
+                break
+
+
+
+
 
 
 # SELECTION TESTS ====================================================================================================================
     def create_test_selector(self):
+        """ Crée la section de sélection des tests statistiques."""
         # Choix de la thématique
         tk.Label(self.test_frame, text="Type de test :").pack(side="left", padx=(5, 0))
         self.theme_var = tk.StringVar(value="Normalité")
@@ -364,6 +535,7 @@ class ComparePage(tk.Frame):
         self.update_test_options()
 
     def update_test_options(self, event=None):
+        """ Met à jour les options de test en fonction du thème sélectionné."""
         theme = self.theme_var.get()
 
         if theme == "Normalité":
@@ -390,6 +562,7 @@ class ComparePage(tk.Frame):
         self.test_combo.set(options[0] if options else "")
 
     def on_test_method_change(self,*args):
+        """ Gère le changement de méthode de test sélectionnée."""
         selected_method = self.test_method_var.get()
         self.append_text(f"Méthode sélectionnée : {selected_method}", color="blue")
         dico_methode_contrainte = {
@@ -418,6 +591,7 @@ class ComparePage(tk.Frame):
         self.append_text(f"Contraintes : {dico_methode_contrainte[selected_method]}", color="red")
 
     def show_conditional_fields(self, show_groupes=False):
+        """ Affiche les champs conditionnels en fonction du thème sélectionné."""
         self.col_var_label.grid()
         self.var_selection.grid()
         self.col_groupe_label.grid()
@@ -435,6 +609,7 @@ class ComparePage(tk.Frame):
             self.groupe2_selection.grid_remove()
 
     def hide_conditional_fields(self):
+        """ Masque les champs conditionnels."""
         for widget in [
             
             self.col_groupe_label, self.groupe_selection,
@@ -445,6 +620,7 @@ class ComparePage(tk.Frame):
             widget.grid_remove()
 
     def maj_selection_colonne(self):
+        """ Met à jour les sélections de colonnes en fonction de la structure actuelle."""
         self.dico_colonne_groupe()
         self.var_selection.maj_donnees(self.dico_structure)
         self.groupe_selection.maj_donnees(self.dico_structure)
@@ -452,6 +628,7 @@ class ComparePage(tk.Frame):
         self.groupe2_selection.maj_donnees(self.dico_groupe)
 
     def dico_colonne_groupe(self):
+        """ Construit un dictionnaire des groupes à partir de la colonne sélectionnée."""
         self.dico_groupe = {}
 
         # Récupérer l’indice de la colonne correspondant au chemin sélectionné
@@ -473,8 +650,9 @@ class ComparePage(tk.Frame):
                 self.dico_groupe[data] = {}  
 
 
-
+    # Tracer des courbes 
     def tracer_courbe_normal(self, feuille,chemin=None):
+        """ Trace une courbe normale pour la colonne sélectionnée."""
         try:
             feuille.entete.structure = self.dico_structure
             feuille.entete.placement_colonne = feuille.entete.set_position()
@@ -484,6 +662,7 @@ class ComparePage(tk.Frame):
             messagebox.showerror("Erreur", f"Erreur lors du traçage de la courbe : {e}")
 
     def tracer_courbe_QQpolt(self, feuille,chemin=None):
+        """ Trace un Q-Q plot pour la colonne sélectionnée."""
         try:
             feuille.entete.structure = self.dico_structure
             feuille.entete.placement_colonne = feuille.entete.set_position()
@@ -493,6 +672,7 @@ class ComparePage(tk.Frame):
             messagebox.showerror("Erreur", f"Erreur lors du traçage de la courbe : {e}")
 
     def afficher_courbe_popup(self, event=None):
+        """ Ouvre une fenêtre popup pour sélectionner et tracer une courbe."""
         # Récupère la feuille sélectionnée dans la liste
         selection = self.var_selection.chemin
         if not selection:
@@ -542,6 +722,7 @@ class ComparePage(tk.Frame):
 
 # FRAME DE RESULTAT ====================================================================================================================
     def create_result_box(self):
+        """ Crée la zone de résultats pour afficher les résultats des tests statistiques."""
         # Cadre pour les résultats du test
         self.result_frame = tk.LabelFrame(self, text="4. Résultats du test", bg="#f4f4f4")
         self.result_frame.pack(fill="both", expand=True, padx=10, pady=5)
@@ -576,6 +757,7 @@ class ComparePage(tk.Frame):
         scroll_x.config(command=self.result_text.xview)
 
     def append_text(self, new_content, color="black"):
+        """ Ajoute du texte à la zone de résultats avec une couleur spécifique."""
         if not hasattr(self, "result_text"):
             print("Erreur : 'result_text' n'a pas été initialisé.")
             return
@@ -586,90 +768,63 @@ class ComparePage(tk.Frame):
         self.result_text.insert("end", new_content + "\n", color)
         self.result_text.see("end")
 
-
-# petite fonction ===========================================================================================================================
     def create_result_tag(self):
+        """ Définit les tags de couleur pour la zone de résultats."""
         # Définir les tags une seule fois
         self.result_text.tag_config("black", foreground="black")
         self.result_text.tag_config("blue", foreground="blue")
         self.result_text.tag_config("red", foreground="red")
         self.result_text.tag_config("green", foreground="green")
 
-    def on_key_release(self, event):
+
+
+# Validation de la taille de l'en-tête =========================================================================================================
+    def on_key_release_int(self, event):
+        """Valide l'entrée de la taille de l'en-tête pour s'assurer qu'elle est un entier positif."""
         if not self.taille_entete_entry.get().isdigit() and self.taille_entete_entry.get() != "":
             messagebox.showwarning("Validation", "Veuillez entrer un nombre entier.")
             self.taille_entete_entry.delete(0, tk.END)
 
-    def ouvrir_aide(self):
-        aide_popup = tk.Toplevel(self)
-        aide_popup.title("Aide - Utilisation")
-        aide_popup.geometry("600x400")
 
-        texte = tk.Text(aide_popup, wrap="word", font=("Segoe UI", 10))
-        texte.pack(fill="both", expand=True, padx=10, pady=10)
-
-        contenu = (
-            "🔍 Bienvenue dans l'application Testeur Excel\n\n"
-            "Voici comment utiliser l'application :\n"
-
-            "1 - Charger un fichier Excel :\n"
-            "   - Cliquez sur le bouton 'Parcourir' pour sélectionner un fichier Excel.\n"
-            "   - Sélectionnez la feuille à analyser dans le menu déroulant.\n"
-            "   - Ajustez la taille de l'en-tête si nécessaire (par défaut 1).\n"
-            "2 - Aperçu du fichier Excel :\n"
-            "   - Un aperçu du fichier Excel s'affiche dans la zone prévue à cet effet.\n"
-            "   - Vous pouvez faire défiler le tableau pour voir les données.\n"
-            "3 - Sélection et exécution de tests statistiques :\n"
-            "   - Choisissez le type de test statistique à exécuter dans le menu déroulant.\n"
-            "   - Sélectionnez la méthode appropriée pour le test choisi.\n"
-            "   - Si nécessaire, sélectionnez la variable et le groupe à analyser.\n"
-            "   - Cliquez sur le bouton 'Exécuter le test' pour lancer l'analyse.\n"
-            "4 - Résultats du test :\n"
-            "   - Les résultats du test s'affichent dans la zone de résultats.\n"
-            "   - Les résultats incluent la statistique du test, la valeur p et une indication de la significativité.\n"
-            "   - Vous pouvez également tracer des courbes pour visualiser les données.\n\n"
-        
-        )
-        
-        texte.insert(tk.END, contenu)
-
+# Construction du dictionnaire d'en-tête =========================================================================================================
     def dico_entete(self):
-            self.dico_structure = {}
-            ligne_entete_debut = self.details_structure.get("entete_debut", 0)
-            ligne_entete_fin = self.details_structure.get("entete_fin", 1)
+        """Construit un dictionnaire représentant la structure de l'en-tête du fichier Excel."""
+        self.dico_structure = {}
+        ligne_entete_debut = self.details_structure.get("entete_debut", 0)
+        ligne_entete_fin = self.details_structure.get("entete_fin", 1)
 
-            try:
-                for col_idx in range(len(self.df.columns)):
-                    current_level = self.dico_structure
+        try:
+            for col_idx in range(len(self.df.columns)):
+                current_level = self.dico_structure
 
-                    for row_idx in range(ligne_entete_debut, ligne_entete_fin + 1):
-                        cell_value = self.df.iloc[row_idx, col_idx]
-                        if pd.isna(cell_value):
-                            continue
-                        cell_value = str(cell_value).strip()
+                for row_idx in range(ligne_entete_debut, ligne_entete_fin + 1):
+                    cell_value = self.df.iloc[row_idx, col_idx]
+                    if pd.isna(cell_value):
+                        continue
+                    cell_value = str(cell_value).strip()
 
-                        if cell_value not in current_level:
-                            current_level[cell_value] = {}
+                    if cell_value not in current_level:
+                        current_level[cell_value] = {}
 
-                        current_level = current_level[cell_value]
+                    current_level = current_level[cell_value]
 
-                
-                self.maj_feuille()
-                self.maj_selection_colonne()
-                return self.dico_structure
+            
+            self.maj_feuille()
+            self.maj_selection_colonne()
+            return self.dico_structure
 
-            except Exception as e:
-                messagebox.showerror("Erreur",  f"Fichier et taille d'entete requis.{e}")
-                # messagebox.showerror("Erreur", f"Impossible de construire le dictionnaire d'en-tête : {e}")
-                return {}
+        except Exception as e:
+            messagebox.showerror("Erreur",  f"Fichier et taille d'entete requis.{e}")
+            # messagebox.showerror("Erreur", f"Impossible de construire le dictionnaire d'en-tête : {e}")
+            return {}
 
 
-    # Exemple de fonctions pour tracer des courbes
 
 
 #EXECUTION DES TESTS ====================================================================================================================
 
     def executer_test_general(self):
+        """ Exécute le test statistique sélectionné et affiche les résultats."""
         
 
         theme = self.theme_var.get()

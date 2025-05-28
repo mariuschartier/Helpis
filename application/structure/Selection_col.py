@@ -3,8 +3,12 @@ import tkinter as tk
 
 
 class Selection_col:
+    """
+    Classe pour gérer la sélection de colonnes et sous-catégories dans une structure d'entête."""
 
     def __init__(self, structure_entete=None):
+        """
+        Initialise la classe avec une structure d'entête."""
         self.structure_entete = structure_entete or {}
         self.chemin = ""
         self.widgets = []  # pour suivre tous les widgets utilisés (combo inclus)
@@ -12,6 +16,7 @@ class Selection_col:
 
 
     def maj_donnees(self, structure_entete):
+        """Met à jour la structure d'entête avec une nouvelle structure."""
         self.structure_entete = structure_entete
         self.colonne_combo['values'] = list(self.structure_entete.keys())
         # print(self.structure_entete)
@@ -57,6 +62,7 @@ class Selection_col:
             combo.bind("<<ComboboxSelected>>", on_selection)
 
         def on_colonne_selection(event=None):
+
             for combo, _ in comboboxes:
                 combo.destroy()
             comboboxes.clear()
@@ -139,17 +145,24 @@ class Selection_col:
         return get_path
 
     def grid(self):
+        """
+        Place tous les widgets de la sélection en utilisant la méthode grid."""
         for widget in self.widgets:
             widget.grid()
 
     def grid_remove(self):
+        """
+        Retire tous les widgets de la sélection de la grille."""
         for widget in self.widgets:
             widget.grid_remove()
 
     def pack(self):
+        """
+        Place tous les widgets de la sélection en utilisant la méthode pack."""
         for widget in self.widgets:
             widget.pack()
 
     def pack_forget(self):
+        """ Retire tous les widgets de la sélection du pack."""
         for widget in self.widgets:
             widget.pack_forget()

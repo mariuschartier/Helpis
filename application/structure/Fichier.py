@@ -6,6 +6,7 @@ from openpyxl.styles import PatternFill
 from typing import Optional
 
 class Fichier:
+    """ Représente un fichier Excel, permettant de manipuler ses feuilles et d'appliquer des styles."""
     def __init__(self, chemin):
         self.chemin = chemin
         self.nom =Path(chemin).stem

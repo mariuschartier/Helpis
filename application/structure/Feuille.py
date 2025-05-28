@@ -9,7 +9,12 @@ from structure.Fichier import Fichier
 from openpyxl import Workbook
 
 class Feuille:
+    """ Représente une feuille d'un fichier Excel, avec ses données et son entête.
+    Cette classe permet de manipuler les données d'une feuille, d'ajouter des erreurs, de colorier des cellules,
+    et de gérer l'entête de la feuille."""
     def __init__(self, fichier : Fichier, nom, debut_data = None, fin_data = None):
+        """ Initialise la feuille avec le fichier Excel, le nom de la feuille,
+        et les indices de début et de fin des données."""
         self.fichier = fichier
         self.nom = nom
         self.df = self.fichier.get_feuille(self.nom)
@@ -42,11 +47,14 @@ class Feuille:
         return f"{self.chemin}(ligne{self.entete.taille_entete})"
     
     def get_feuille(self):
+        """ Retourne le DataFrame de la feuille."""
         df = self.fichier.get_feuille(self.nom)
         return df
     
     
     def ajouts_erreur(self, lignes: list, col_index: int, code_erreur=1):
+        """
+        Ajoute une erreur à la feuille aux lignes et colonnes spécifiées."""
         for i in lignes:
             excel_row = i - self.entete.taille_entete
             if 0 <= excel_row < self.nb_ligne:
@@ -133,6 +141,8 @@ class Feuille:
         print(f"📁 Fichier sauvegardé : {self.fichier.chemin}")
                 
     def one_line_header_pandas(self)->pd.DataFrame:
+        """ Retourne un DataFrame avec l'entête fusionnée en une seule ligne,
+        suivi des données de la feuille."""
         # Obtenir la liste représentant l'entête fusionnée
         entete_list = self.entete.une_ligne()
 
@@ -148,6 +158,9 @@ class Feuille:
         return resultat
             
     def one_line_header_openpyxl(self, filename=None)->Workbook:
+
+        """ Retourne un Workbook avec l'entête fusionnée en une seule ligne,
+        suivi des données de la feuille."""
         # Obtenir l'entête sous forme de liste
         entete_list = self.entete.une_ligne()
         # Extraire les données
@@ -168,3 +181,24 @@ class Feuille:
         return wb
         # Enregistrer le fichier
         # wb.save(filename)
+
+
+    def maj_feuille(self,fichier: Fichier, nom: str, debut_data: Optional[int] = None, fin_data: Optional[int] = None):
+        """
+        Met à jour ou crée une feuille dans un fichier Excel.
+        
+        :param fichier: Instance de la classe Fichier contenant le chemin du fichier Excel.
+        :param nom: Nom de la feuille à mettre à jour ou créer.
+        :param debut_data: Indice de début des données (optionnel).
+        :param fin_data: Indice de fin des données (optionnel).
+        :return: Instance de la classe Feuille mise à jour.
+        """
+        if isinstance(fichier, Fichier):
+            self.fichier = fichier
+        if  isinstance(nom, str) :
+            self.nom = nom
+        if isinstance(debut_data, int):
+            self.debut_data = debut_data
+        if  isinstance(fin_data, int):
+            self.fin_data = fin_data        
+        
