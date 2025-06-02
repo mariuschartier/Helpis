@@ -164,7 +164,7 @@ def process_and_format_excel(input_file, sheet_name, output_file):
 
 def determine_jour(date_str):
     # Parser la date
-    dt = datetime.strptime(date_str, "%d/%m/%y %H:%M")
+    dt = datetime.strptime(date_str, "%d-%m-%y_%H-%M")
     
     # Extraire jour du mois, mois et année en format 4 chiffres
     jour_mois = dt.strftime("%d")  # exemple : '15'
@@ -238,7 +238,7 @@ def moyenne_par_jour(feuille,output_file ,date_col=0):
 
 def determine_semaine(date_str):
     # Parser la date
-    dt = datetime.strptime(date_str, "%d/%m/%y %H:%M")
+    dt = datetime.strptime(date_str, "%d-%m-%y_%H-%M")
 
     # Extraire annee et semaine ISO
     annee, semaine, _ = dt.isocalendar()
@@ -270,11 +270,11 @@ def moyenne_par_semaine(feuille, output_file,date_col=0):
             dt = date_cell
         else:
             try:
-                dt = datetime.strptime(str(date_cell), "%d/%m/%y %H:%M")
+                dt = datetime.strptime(str(date_cell), "%d-%m-%y_%H-%M")
             except Exception:
                 continue  # Ignorer si la cellule n'est pas une date valide
 
-        clef_semaine, dt_obj = determine_semaine(dt.strftime("%d/%m/%y %H:%M"))
+        clef_semaine, dt_obj = determine_semaine(dt.strftime("%d-%m-%y_%H-%M"))
 
         if clef_semaine not in semaines_dict:
             semaines_dict[clef_semaine] = {"rows": [], "date": dt_obj}

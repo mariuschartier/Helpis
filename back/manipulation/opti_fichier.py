@@ -113,7 +113,7 @@ def opti_html_to_xlsx(file_path: str, name=""):
         structured_data.append(structured_row)
 
     # Préparer le workbook
-    result_path = f"results/{name}.xlsx"
+    result_path = f"{name}.xlsx"
     if exist_file(result_path):
         wb = load_workbook(result_path, data_only=True)
         if "opti" in wb.sheetnames:

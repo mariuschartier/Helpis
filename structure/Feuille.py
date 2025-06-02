@@ -164,7 +164,7 @@ class Feuille:
         # Obtenir l'entête sous forme de liste
         entete_list = self.entete.une_ligne()
         # Extraire les données
-        data = self.df.iloc[self.debut_data:self.fin_data].reset_index(drop=True)
+        data = self.df.iloc[self.debut_data+1:self.fin_data].reset_index(drop=True)
 
         # Créer un nouveau workbook ou ouvrir un existant
         wb = Workbook()

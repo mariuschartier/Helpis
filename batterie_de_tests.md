@@ -38,7 +38,7 @@
     - V
 - Affichage du excel
     - V
-- Affichage des messages de reponse
+- Affichage des messages de reponses
     - V
 - Affichage du resumer des erreurs
     - V
@@ -53,10 +53,15 @@
 ### xlsx
 - Ameliorer xlsx
     - V
+
 - moyenne jour
+    - changement du format de date
     - V
 - Moyenne semaine
+
+    - changement du format de date
     - V
+    
 - Entete une ligne 
     - V
 

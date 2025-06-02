@@ -85,7 +85,7 @@ class opti_xls(tk.Frame):
     def choisir_fichier(self):
         """
         Ouvre une boîte de dialogue pour sélectionner un fichier Excel (.xls ou .xlsx)."""
-        dossier_data = Path("results")
+        dossier_data = Path("sauvegardes/results")
         dossier_data.mkdir(parents=True, exist_ok=True)  # Crée le dossier s’il n’existe pas
 
         filepath = filedialog.askopenfilename(
