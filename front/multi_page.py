@@ -30,6 +30,9 @@ class MultiPageApp(tk.Tk):
         style = ttk.Style()
         style.theme_use('clam')
         font_default = ('Segoe UI', 10)
+        ico_path = "logo.ico"
+        self.iconbitmap(ico_path)
+
         
         # Style global
         style.configure(".", font=font_default, background=FOND_CLAIR)
