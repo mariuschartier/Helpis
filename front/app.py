@@ -200,7 +200,8 @@ class ExcelTesterApp(tk.Frame):
             else 0
         )
         self.details_structure["ligne_unite"] = self.details_structure["entete_fin"]
-        self.details_structure["data_debut"] = self.details_structure["entete_fin"]+1
+        if self.details_structure["data_debut"] <= self.details_structure["entete_fin"]:
+            self.details_structure["data_debut"] = self.details_structure["entete_fin"]+1
 
         self.enlever_toutes_couleurs()
         self.colorier_lignes_range(

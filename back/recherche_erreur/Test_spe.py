@@ -16,15 +16,6 @@ class Test_spe:
 
 
 
-
-
-
-
-
-    
-
-
-
     def val_max(self, val_max: float, colonne: str):
         """
         Vérifie que les valeurs sont <= val_max"""
@@ -100,9 +91,10 @@ class Test_spe:
             raise ValueError(msg_tmp)
 
         ligne_data = self.feuille.debut_data
+        ligne_fin= self.feuille.fin_data
         print(ligne_data)
         entete_2 = str(df.iloc[1, indices_colonnes])
-        valeurs = pd.to_numeric(df.loc[ligne_data:, indices_colonnes], errors='coerce')
+        valeurs = pd.to_numeric(df.loc[ligne_data:ligne_fin, indices_colonnes], errors='coerce')
 
         # Vérification et conversion en série si nécessaire
         if isinstance(valeurs, (int, float)):
@@ -175,11 +167,12 @@ class Test_spe:
             raise ValueError(msg_tmp)
 
         ligne_data = self.feuille.debut_data
+        ligne_fin= self.feuille.fin_data
         entete_1 = str(df.iloc[1, indices_colonne1])
         entete_2 = str(df.iloc[1, indices_colonne2])
 
-        valeurs1 = pd.to_numeric(df.loc[ligne_data:, indices_colonne1], errors='coerce')
-        valeurs2 = pd.to_numeric(df.loc[ligne_data:, indices_colonne2], errors='coerce')
+        valeurs1 = pd.to_numeric(df.loc[ligne_data:ligne_fin, indices_colonne1], errors='coerce')
+        valeurs2 = pd.to_numeric(df.loc[ligne_data:ligne_fin, indices_colonne2], errors='coerce')
 
         # Vérification et conversion en série si nécessaire
         if isinstance(valeurs1, (int, float)) and isinstance(valeurs2, (int, float)):

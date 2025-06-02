@@ -60,13 +60,13 @@ class Test_gen:
         df = feuille.get_feuille()
         ligne_symbole = feuille.entete.ligne_unite
         ligne_data = feuille.debut_data
+        ligne_fin = feuille.fin_data
         colonne_symbole = []
         for cle in feuille.entete.placement_colonne:
             for  crit in self.critere:
                 if crit in cle:
                     colonne_symbole.append(feuille.entete.placement_colonne[cle])
 
-        print(ligne_data)
         message_final = ""  
         
         if colonne_symbole == []:   
@@ -74,7 +74,6 @@ class Test_gen:
             message_final = f"Le critère '{self.critere}' n'existe pas dans le DataFrame.\n"
             return message_final
                 
-        print(ligne_data)
         message_final = ""  
     
         for col in df.columns:
@@ -85,7 +84,7 @@ class Test_gen:
                 print(msg_tmp)
                 # message_final += msg_tmp
                 
-                valeurs = pd.to_numeric(df[col].iloc[ligne_data:], errors='coerce')
+                valeurs = pd.to_numeric(df[col].iloc[ligne_data:ligne_fin], errors='coerce')
                 masques_valides = condition(valeurs)
                 valeurs_invalides = valeurs[~masques_valides]
     

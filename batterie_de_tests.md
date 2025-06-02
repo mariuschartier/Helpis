@@ -12,6 +12,7 @@
     - Ajout de condition pour s'assurer que l'entete soit choisie
     - V
 - Choix de l'entete specifique
+    - maj de l'actualisation des variables 
     - V
 
 ### Actions de tests
