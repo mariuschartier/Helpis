@@ -92,3 +92,104 @@ def plot_qqplot(indice_col: int, feuille):
         from tkinter import messagebox
         messagebox.showerror("Erreur", f"Erreur lors de l'affichage du Q-Q plot : {e}")
         print(f"Erreur : {e}")
+
+def plot_boxplot(indice_col: int, feuille):
+    """
+    Trace un boxplot pour une colonne de données provenant d'un fichier Excel.
+    
+    Args:
+    - file_path (str): Chemin du fichier Excel.
+    - sheet_name (str): Nom de la feuille contenant les données.
+    - column_name (str): Nom de la colonne contenant les données à analyser.
+    
+    Returns:
+    - None
+    """
+    try:
+        df = feuille.get_feuille()
+        start_row = feuille.debut_data
+        end_row = feuille.fin_data
+        # Vérification
+        print(f"Type de df : {type(df)}")
+        print(f"Range de lignes : {start_row} à {end_row}")
+        print(f"Colonne : {indice_col}")
+        donnees = df.iloc[start_row:end_row, indice_col].dropna()
+    except Exception as e:
+        print(f"Erreur lors du chargement des données : {e}")
+        return
+
+    # Tracer le boxplot
+    plt.figure(figsize=(8, 6))
+    plt.boxplot(donnees)
+    plt.title('Boxplot')
+    plt.ylabel('Valeurs')
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

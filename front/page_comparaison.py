@@ -13,7 +13,7 @@ from structure.Fichier import Fichier
 from structure.Selection_col import Selection_col
 
 from back.tests_statistiques.ComparateurFichiers import ComparateurFichiers
-from back.tests_statistiques.courbes import plot_histogram_normal,plot_qqplot
+from back.tests_statistiques.courbes import plot_histogram_normal,plot_qqplot, plot_boxplot
 from fonctions import to_int
 
 
@@ -49,6 +49,7 @@ class ComparePage(tk.Frame):
         self.fonctions_courbes = [
         ("Normalité", self.tracer_courbe_normal),
         ("Q-Q plot", self.tracer_courbe_QQpolt),
+        ("Boite à chat",self.plot_boxplot)
         ]
         self.colonne_actuelle  = ""
 
@@ -750,6 +751,15 @@ class ComparePage(tk.Frame):
 
         self.wait_window(popup)
 
+    def plot_boxplot(self, feuille, chemin=None):
+        """ Trace un boxplot pour la colonne sélectionnée."""
+        try:
+            feuille.entete.structure = self.dico_structure
+            feuille.entete.placement_colonne = feuille.entete.set_position()
+            indice_colonne = feuille.entete.placement_colonne[chemin]
+            plot_boxplot(indice_colonne, feuille)
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors du traçage du boxplot : {e}")
 
 
 # FRAME DE RESULTAT ====================================================================================================================
