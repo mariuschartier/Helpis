@@ -618,7 +618,8 @@ class ComparePage(tk.Frame):
             "              ✅ Données ordinales ou continues.\n"
             "              ✅ Groupes indépendants.\n"
         }
-        self.append_text(f"Contraintes : {dico_methode_contrainte[selected_method]}", color="red")
+        if selected_method  in dico_methode_contrainte:
+            self.append_text(f"Contraintes : {dico_methode_contrainte[selected_method]}", color="red")
 
     def show_conditional_fields(self, show_groupes=False):
         """ Affiche les champs conditionnels en fonction du thème sélectionné."""
