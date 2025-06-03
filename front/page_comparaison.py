@@ -503,7 +503,7 @@ class ComparePage(tk.Frame):
         # Choix de la thématique
         tk.Label(self.test_frame, text="Type de test :").pack(side="left", padx=(5, 0))
         self.theme_var = tk.StringVar(value="Normalité")
-        themes = ["Normalité", "Homogénéité des variances", "Comparaison de groupes", "Moyennes hebdomadaires"]
+        themes = ["Normalité", "Homogénéité des variances", "Comparaison de groupes", "Moyennes hebdomadaires","Autre"]
         self.theme_combo = ttk.Combobox(self.test_frame, values=themes, textvariable=self.theme_var, state="readonly", width=25)
         self.theme_combo.pack(side="left", padx=5)
         self.theme_combo.bind("<<ComboboxSelected>>", self.update_test_options)
@@ -567,21 +567,23 @@ class ComparePage(tk.Frame):
         theme = self.theme_var.get()
 
         if theme == "Normalité":
-            options = ["shapiro", "dagostino", "anderson"]
+            options = ["Shapiro", "Dagostino", "Anderson"]
             self.hide_conditional_fields()
 
         elif theme == "Homogénéité des variances":
-            options = ["levene", "bartlett"]
+            options = ["Levene", "Bartlett"]
             self.show_conditional_fields(show_groupes=False)
 
         elif theme == "Comparaison de groupes":
-            options = ["student", "mannwhitney"]
+            options = ["Student", "Mannwhitney"]
             self.show_conditional_fields(show_groupes=True)
 
         elif theme == "Moyennes hebdomadaires":
-            options = ["student", "mannwhitney"]
+            options = ["Student", "Mannwhitney"]
             self.show_conditional_fields(show_groupes=True)
-
+        elif theme == "Autre":
+            options = ["Moyenne", "Mediane", "Variance", "Ecart-type"]
+            self.hide_conditional_fields()
         else:
             options = []
             self.hide_conditional_fields()
@@ -594,25 +596,25 @@ class ComparePage(tk.Frame):
         selected_method = self.test_method_var.get()
         self.append_text(f"Méthode sélectionnée : {selected_method}", color="blue")
         dico_methode_contrainte = {
-            "shapiro": "✅ Taille de l’échantillon : 3 ≤ n ≤ 2000\n"
+            "Shapiro": "✅ Taille de l’échantillon : 3 ≤ n ≤ 2000\n"
             "              ✅ Données quantitatives continues.\n",
 
-            "dagostino": "✅ Taille de l’échantillon : n ≥ 20.\n"
+            "Dagostino": "✅ Taille de l’échantillon : n ≥ 20.\n"
             "              ✅ Données quantitatives continues.\n",
 
-            "anderson": "✅ Aucune limite stricte sur n, mais plus précis pour n ≥ 50.\n"
+            "Anderson": "✅ Aucune limite stricte sur n, mais plus précis pour n ≥ 50.\n"
             "              ✅ Données quantitatives continues.\n",
 
-            "levene": "✅ Pas de normalité requise.\n"
+            "Levene": "✅ Pas de normalité requise.\n"
             "              ✅ Groupes indépendants.\n",
 
-            "bartlett": "✅ Les données doivent être normales.\n"
+            "Bartlett": "✅ Les données doivent être normales.\n"
             "              ✅ Groupes indépendants.\n",
 
-            "student": "✅ Données normales dans chaque groupe.\n"
+            "Student": "✅ Données normales dans chaque groupe.\n"
             "              ✅ Homogénéité des variances.\n"
             "              ✅ Groupes indépendants ou appariés.\n",
-            "mannwhitney": "✅ Aucune condition de normalité requise.\n"
+            "Mannwhitney": "✅ Aucune condition de normalité requise.\n"
             "              ✅ Données ordinales ou continues.\n"
             "              ✅ Groupes indépendants.\n"
         }
@@ -952,5 +954,14 @@ class ComparePage(tk.Frame):
             else:
                 self.append_text(                    f"{var} (moy. hebdo) entre {res['groupe_1']} et {res['groupe_2']} ({methode}) :\n"
                     f"Stat={res['stat']:.4f}, p={res['p_value']:.4f} → {'✅ Différence significative' if res['significatif'] else '❌ Pas de différence'}\n")
+                
+        elif theme == "Autre":
+            resultats = self.comparateur.tester_autre(self.var_selection.chemin, methode=methode)
+            if resultats["error"] is  None:
+                self.append_text( f"{self.var_selection.chemin} : {methode} = {resultats[methode]}\n")
+
+            else:
+                self.append_text( f"Colonne {self.self.var_selection.chemin} : données insuffisantes\n")
+
 
 
