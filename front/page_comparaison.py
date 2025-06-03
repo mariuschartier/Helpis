@@ -78,6 +78,8 @@ class ComparePage(tk.Frame):
         self.feuille_combo = ttk.Combobox(self.file_frame, textvariable=self.feuille_nom, state="readonly")
         self.feuille_combo.pack(side="left", padx=5)
         self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.afficher_excel())
+        self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.on_feuille_change())
+
 
 
         # Choix de la taille de l'en-tête
@@ -114,6 +116,25 @@ class ComparePage(tk.Frame):
             self.details_structure["entete_fin"])
 
         self.dico_entete()
+
+    def on_feuille_change(self, event=None):
+        self.feuille_nom.set(self.feuille_combo.get())
+        self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None)
+
+        # print(f"Feuille changée : {self.feuille_nom.get()}")
+        # print(f"DataFrame shape : {self.df.shape}")
+
+        self.details_structure = {
+            "entete_debut": 0,
+            "entete_fin": 0,
+            "data_debut": 1,
+            "data_fin": self.df.shape[0] if self.df is not None else None,
+            "nb_colonnes_secondaires": 0,
+            "ligne_unite": 0,
+            "ignorer_vide": True
+        }
+        self.maj_feuille()
+        self.afficher_excel()
 
 
     def choisir_fichier(self):
@@ -176,7 +197,7 @@ class ComparePage(tk.Frame):
                             )
             feuille.entete = entete
             self.comparateur.ajouter_feuille(feuille)
-            messagebox.showinfo("Ajout réussi", f"La feuille a été ajoutée au comparateur.")
+            # messagebox.showinfo("Ajout réussi", f"La feuille a été ajoutée au comparateur.")
         except Exception as e:
             messagebox.showerror("Erreur", f"Impossible d'ajouter la feuille : {e}")
     
@@ -647,13 +668,18 @@ class ComparePage(tk.Frame):
             messagebox.showerror("Erreur", f"Colonne '{chemin_colonne}' non trouvée dans la feuille.")
             return
 
-        for idx in range(self.comparateur.feuille.debut_data, self.comparateur.feuille.nb_ligne):
-            data = self.df.iloc[idx, indice_colonne]
-            if pd.isna(data):
-                continue
-            data = str(data)
-            if data not in self.dico_groupe:
-                self.dico_groupe[data] = {}  
+        for idx in range(self.comparateur.feuille.debut_data, self.comparateur.feuille.fin_data):
+            try:
+                data = self.df.iloc[idx, indice_colonne]
+                if pd.isna(data):
+                    continue
+                data = str(data)
+                if data not in self.dico_groupe:
+                    self.dico_groupe[data] = {}  
+            except IndexError:
+                messagebox.showerror("Erreur", f"Index {idx} hors des limites pour la colonne {chemin_colonne}.")
+                print(f"Index {idx} hors des limites pour la colonne {chemin_colonne}/{indice_colonne}.")
+                return
 
 
     # Tracer des courbes 
@@ -855,8 +881,7 @@ class ComparePage(tk.Frame):
             var = self.var_selection.chemin
             groupe = self.groupe_selection.chemin
 
-            i_groupe = self.comparateur.feuille.entete.placement_colonne[groupe]
-            i_var = self.comparateur.feuille.entete.placement_colonne[var]
+
 
 
             # print(f"i_groupe : {groupe}, i_var : {var}")

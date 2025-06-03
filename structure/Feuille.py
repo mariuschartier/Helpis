@@ -202,3 +202,4 @@ class Feuille:
         if  isinstance(fin_data, int):
             self.fin_data = fin_data        
         
+        

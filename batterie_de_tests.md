@@ -80,6 +80,7 @@
 
 #### Homogénéité des variances
 - levene
+    -correction de bug
     - V
 - bartlett
     - V
