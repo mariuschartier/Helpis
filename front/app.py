@@ -224,9 +224,6 @@ class ExcelTesterApp(ttkb.Frame):
         for col in range(num_columns):
             container.grid_columnconfigure(col, weight=1)
 
-
-
-    
     def on_taille_entete_change(self, *args):
         """
         Met à jour la fin de l'en-tête 

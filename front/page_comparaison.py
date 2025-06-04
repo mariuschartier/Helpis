@@ -88,6 +88,8 @@ class ComparePage(ttkb.Frame):
 
         self.feuille_combo = ttk.Combobox(self.file_frame, textvariable=self.feuille_nom, state="readonly", width=20)
         self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.afficher_excel())
+        self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.on_feuille_change())
+
         self.widgets_file_frame.append(self.feuille_combo)
 
         # Création d'un sous-frame pour aligner label_entete et taille_entete_entry
@@ -103,8 +105,8 @@ class ComparePage(ttkb.Frame):
         self.widgets_file_frame.append(entete_frame)
 
 
-        detail_btn = ttkb.Button(self.file_frame, text="detail", command=self.ouvrir_popup_manipulation, width=10)
-        self.widgets_file_frame.append(detail_btn)
+        self.detail_btn = ttkb.Button(self.file_frame, text="detail", command=self.ouvrir_popup_manipulation, width=10)
+        self.widgets_file_frame.append(self.detail_btn)
 
         aide_btn = ttkb.Button(self.file_frame, text="❓ Aide", command=self.ouvrir_aide, width=10)
         self.widgets_file_frame.append(aide_btn)
@@ -174,6 +176,10 @@ class ComparePage(ttkb.Frame):
         }
         self.maj_feuille()
         self.afficher_excel()
+        # self.reset_combo()
+        
+        self.desactivation_bouton_choix_colonne()
+        
 
 
     def choisir_fichier(self):
@@ -198,6 +204,7 @@ class ComparePage(ttkb.Frame):
             self.ajouter_feuille()
             self.afficher_excel()
             self.activation_bouton_choix_fichier()
+            self.on_feuille_change()
         except Exception as e:
             messagebox.showerror("Erreur", f"Erreur de lecture du fichier : {e}")
                
@@ -216,7 +223,6 @@ class ComparePage(ttkb.Frame):
                         nb_colonnes_secondaires=self.details_structure["nb_colonnes_secondaires"],
                         ligne_unite=self.details_structure["ligne_unite"],
                         structure=self.dico_structure)
-
         
     def ajouter_feuille(self):
         """ Ajoute la feuille sélectionnée au comparateur."""
@@ -539,7 +545,9 @@ class ComparePage(ttkb.Frame):
         self.taille_entete_entry.config(state="normal")
         self.detail_btn.config(state="normal")
 
-    
+    def activation_bouton_choix_colonne(self):
+        self.bouton_execution.config(state="normal")
+        self.bouton_courbe.config(state="normal")
 
     def desactivation_bouton(self):
         #entete
@@ -549,6 +557,9 @@ class ComparePage(ttkb.Frame):
         self.bouton_execution.config(state="disabled")
         self.bouton_courbe.config(state="disabled")
 
+    def desactivation_bouton_choix_colonne(self):
+        self.bouton_execution.config(state="disabled")
+        self.bouton_courbe.config(state="disabled")
 
 
 
@@ -581,6 +592,7 @@ class ComparePage(ttkb.Frame):
 
         self.col_var_label = tk.Label(self.grid_frame, text="Variable :", bg="#f4f4f4")
         self.var_selection = Selection_col(self.dico_structure)
+        self.var_selection.action_selection = self.on_colonne_change
         self.col_var = self.var_selection.get_frame_selection_grid( self.grid_frame,0,1)
 
         self.col_groupe_label = tk.Label(self.grid_frame, text="Groupe :", bg="#f4f4f4")
@@ -611,8 +623,10 @@ class ComparePage(ttkb.Frame):
         # self.col_groupe2.grid(row=1, column=3, padx=5, pady=2)
 
         # Bouton d'exécution
-        self.bouton_execution = ttkb.Button(self.test_frame, text="Exécuter le test", command=self.executer_test_general).pack(side="left", padx=10)
-        self.bouton_courbe =ttkb.Button(self.test_frame, text="afficher courbe variable", command=self.afficher_courbe_popup).pack(side="left", padx=10)
+        self.bouton_execution = ttkb.Button(self.test_frame, text="Exécuter le test", command=self.executer_test_general)
+        self.bouton_execution.pack(side="left", padx=10)
+        self.bouton_courbe =ttkb.Button(self.test_frame, text="afficher courbe variable", command=self.afficher_courbe_popup)
+        self.bouton_courbe.pack(side="left", padx=10)
 
 
         self.update_test_options()
@@ -713,6 +727,12 @@ class ComparePage(ttkb.Frame):
         self.groupe1_selection.maj_donnees(self.dico_groupe)
         self.groupe2_selection.maj_donnees(self.dico_groupe)
 
+    def on_colonne_change(self):
+        if self.var_selection.chemin !="":
+            self.activation_bouton_choix_colonne()
+        else:            
+            self.desactivation_bouton_choix_colonne()
+
     def dico_colonne_groupe(self):
         """ Construit un dictionnaire des groupes à partir de la colonne sélectionnée."""
         self.dico_groupe = {}
@@ -739,6 +759,23 @@ class ComparePage(ttkb.Frame):
                 messagebox.showerror("Erreur", f"Index {idx} hors des limites pour la colonne {chemin_colonne}.")
                 print(f"Index {idx} hors des limites pour la colonne {chemin_colonne}/{indice_colonne}.")
                 return
+
+    def reset_combo(self):
+        self.var_selection = Selection_col(self.dico_structure)
+        self.var_selection.action_selection = self.on_colonne_change
+        self.col_var = self.var_selection.get_frame_selection_grid( self.grid_frame,0,1)
+
+
+        self.groupe_selection = Selection_col(self.dico_structure)
+        self.groupe_selection.action_selection = self.maj_selection_colonne
+
+        self.col_groupe = self.groupe_selection.get_frame_selection_grid( self.grid_frame,0,3)
+
+        self.groupe1_selection = Selection_col(self.dico_groupe)
+        self.col_groupe1 = self.groupe1_selection.get_frame_selection_grid( self.grid_frame,0,5)
+
+        self.groupe2_selection = Selection_col(self.dico_groupe)
+        self.col_groupe2 = self.groupe2_selection.get_frame_selection_grid( self.grid_frame,1,5)
 
 
     # Tracer des courbes 
@@ -922,7 +959,6 @@ class ComparePage(ttkb.Frame):
 
 
 #EXECUTION DES TESTS ====================================================================================================================
-
     def executer_test_general(self):
         """ Exécute le test statistique sélectionné et affiche les résultats."""
         
@@ -935,10 +971,15 @@ class ComparePage(ttkb.Frame):
             messagebox.showwarning("Aucune sélection", "Veuillez sélectionner une colonne.")
             return
         
+        if not self.var_selection.chemin in self.dico_structure.keys():
+            messagebox.showwarning("La colonne n'appartient pas à la feuille", "Veuillez sélectionner une colonne de cette feuille.")
+            return
+
+
         if theme == "Normalité":
             resultats = self.comparateur.tester_normalite(self.var_selection.chemin, methode=methode)
             if resultats["stat"] is None:
-                self.append_text( f"Colonne {self.self.var_selection.chemin} : données insuffisantes\n")
+                self.append_text( f"Colonne {self.var_selection.chemin} : données insuffisantes\n")
             else:
                 normalite = "✅ Normale" if resultats["normal"] else "❌ Non normale"
                 stat = f"{resultats['stat']:.4f}"
@@ -1017,7 +1058,7 @@ class ComparePage(ttkb.Frame):
                 self.append_text( f"{self.var_selection.chemin} : {methode} = {resultats[methode]}\n")
 
             else:
-                self.append_text( f"Colonne {self.self.var_selection.chemin} : données insuffisantes\n")
+                self.append_text( f"Colonne {self.var_selection.chemin} : données insuffisantes\n")
 
 
 

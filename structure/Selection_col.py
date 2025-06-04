@@ -19,6 +19,8 @@ class Selection_col:
         """Met à jour la structure d'entête avec une nouvelle structure."""
         self.structure_entete = structure_entete
         self.colonne_combo['values'] = list(self.structure_entete.keys())
+        self.chemin = ""
+
         # print(self.structure_entete)
 
     
@@ -77,11 +79,11 @@ class Selection_col:
         def get_path():
             col1 = self.colonne_combo.get()
             selection = [combo.get() for combo, _ in comboboxes if combo.get()]
-            chemin = " > ".join([col1] + selection) if col1 else None
+            self.chemin = " > ".join([col1] + selection) if col1 else None
 
             if self.action_selection:
                 self.action_selection()
-            return chemin
+            return self.chemin
 
         return get_path
 
@@ -166,3 +168,5 @@ class Selection_col:
         """ Retire tous les widgets de la sélection du pack."""
         for widget in self.widgets:
             widget.pack_forget()
+
+
