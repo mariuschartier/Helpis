@@ -1,34 +1,46 @@
-# import matplotlib.pyplot as plt
+import tkinter as tk
 
-# # Exemple de liste de données
-# data = [7, 15, 13, 9, 12, 8, 10, 14, 11, 16, 12, 9]
+class WrappingGridApp:
+    def __init__(self, root):
+        self.root = root
+        root.geometry("600x300")
+        root.title("Grille avec wrapping dynamique")
 
-# # Création de la boîte à moustache
-# plt.boxplot(data)
+        self.frame = tk.Frame(root)
+        self.frame.pack(fill="both", expand=True)
 
-# # Ajout de titres et labels
-# plt.title("Boîte à moustache")
-# plt.ylabel("Valeurs")
+        self.widgets = []
+        self.num_columns = 4  # Valeur par défaut
 
-# # Affichage du graphique
-# plt.show()
+        for i in range(20):  # 20 widgets pour tester le wrapping
+            btn = tk.Button(self.frame, text=f"Widget {i+1}", width=15)
+            self.widgets.append(btn)
 
-import matplotlib.pyplot as plt
+        self.arrange_widgets()
 
-# Exemple de liste de données
-categories = ['Catégorie 1', 'Catégorie 2', 'Catégorie 3', 'Catégorie 4']
-valeur1 = [10, 15, 7, 12]
-valeur2 = [8, 11, 9, 14]
+        self.root.bind("<Configure>", self.on_resize)
 
-# Création du bareplot
-plt.bar(categories, valeur1, label='Série 1')
-plt.bar(categories, valeur2, bottom=valeur1, label='Série 2')
+    def arrange_widgets(self):
+        for widget in self.frame.winfo_children():
+            widget.grid_forget()
 
-# Ajout de titres et labels
-plt.title("Barplot")
-plt.xlabel("Catégories")
-plt.ylabel("Valeurs")
-plt.legend()
+        for index, widget in enumerate(self.widgets):
+            row = index // self.num_columns
+            col = index % self.num_columns
+            widget.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
 
-# Affichage du graphique
-plt.show()
+        for col in range(self.num_columns):
+            self.frame.columnconfigure(col, weight=1)
+
+    def on_resize(self, event):
+        width = self.frame.winfo_width()
+        new_columns = max(1, width // 150)  # ajuster la largeur de seuil
+        if new_columns != self.num_columns:
+            self.num_columns = new_columns
+            self.arrange_widgets()
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = WrappingGridApp(root)
+    root.mainloop()
+

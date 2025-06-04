@@ -65,39 +65,75 @@ class ComparePage(tk.Frame):
 
 # frame de test ==========================================================
 # Champ de chargement du fichier et de l'entete
+    
     def create_file_frame(self):
-        """ Crée le cadre pour le chargement du fichier Excel et la sélection de l'en-tête.
-        """
+        """Crée le cadre pour charger le fichier Excel et configurer l'en-tête avec wrapping dynamique et taille minimale."""
         self.file_frame = tk.LabelFrame(self, text="1. Charger un fichier Excel", bg="#f4f4f4")
-        self.file_frame.pack(fill="x", padx=10, pady=5)
+        self.file_frame.pack(fill="x", expand=False, padx=10, pady=5)
 
-        self.fichier_entry = tk.Entry(self.file_frame, width=80)
-        self.fichier_entry.pack(side="left", padx=5, pady=5)
-
-        tk.Button(self.file_frame, text="Parcourir", command=self.choisir_fichier).pack(side="left", padx=5)
-
-        self.feuille_combo = ttk.Combobox(self.file_frame, textvariable=self.feuille_nom, state="readonly")
-        self.feuille_combo.pack(side="left", padx=5)
-        self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.afficher_excel())
-        self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.on_feuille_change())
-
-
-
-        # Choix de la taille de l'en-tête
         self.taille_entete_var = tk.StringVar()
-        tk.Label(self.file_frame, text="Taille de l'en-tête :").pack(side="left", padx=(10, 0))
-        self.taille_entete_entry = tk.Entry(self.file_frame, width=5,textvariable=self.taille_entete_var )
-        self.taille_entete_var.set(1)  # Met à jour l'Entry avec 1
+        self.taille_entete_var.set("1")
+        self.widgets_file_frame = []
+
+        # Widgets à placer dynamiquement
+        self.fichier_entry = tk.Entry(self.file_frame, width=60)
+        self.widgets_file_frame.append(self.fichier_entry)
+
+        parcourir_btn = tk.Button(self.file_frame, text="Parcourir", command=self.controller.bind_button(self.choisir_fichier), width=15)
+        self.widgets_file_frame.append(parcourir_btn)
+
+        self.feuille_combo = ttk.Combobox(self.file_frame, textvariable=self.feuille_nom, state="readonly", width=20)
+        self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.afficher_excel())
+        self.widgets_file_frame.append(self.feuille_combo)
+
+        # Création d'un sous-frame pour aligner label_entete et taille_entete_entry
+        entete_frame = tk.Frame(self.file_frame, bg="#f4f4f4")
+        label_entete = tk.Label(entete_frame, text="Taille de l'en-tête :")
+        label_entete.pack(side="left")
+
+        self.taille_entete_entry = tk.Entry(entete_frame, width=5, textvariable=self.taille_entete_var)
         self.taille_entete_var.trace_add("write", self.on_taille_entete_change)
-
-        self.taille_entete_entry.pack(side="left", padx=5)
-        tk.Button(self.file_frame, text="❓ Aide", command=self.ouvrir_aide).pack(side="right", padx=5)
         self.taille_entete_entry.bind("<KeyRelease>", self.on_key_release_int)
- 
-        tk.Button(self.file_frame, text="detail", command=self.ouvrir_popup_manipulation).pack(side="right", padx=5)
+        self.taille_entete_entry.pack(side="left", padx=5)
 
-        # tk.Button(self.file_frame, text="Ajouter au comparateur", command=self.ajouter_feuille).pack(side="left", padx=10)
-      
+        self.widgets_file_frame.append(entete_frame)
+
+
+        detail_btn = tk.Button(self.file_frame, text="detail", command=self.ouvrir_popup_manipulation, width=10)
+        self.widgets_file_frame.append(detail_btn)
+
+        aide_btn = tk.Button(self.file_frame, text="❓ Aide", command=self.ouvrir_aide, width=10)
+        self.widgets_file_frame.append(aide_btn)
+
+
+
+        self.file_frame.bind("<Configure>", lambda event: self.arrange_widgets_file_frame(self.file_frame, self.widgets_file_frame))
+
+        return self.file_frame
+
+    def arrange_widgets_file_frame(self, container, widgets):
+        container.update_idletasks()
+        width = container.winfo_width()
+        widget_width = 150  # largeur minimale estimée par widget
+        num_columns = max(1, width // widget_width)
+        # print(f"width = {width}")
+        # print(f"widget_width = {widget_width}")
+        # print(f"nb_colonne = {num_columns}")
+
+
+        for widget in container.winfo_children():
+            widget.grid_forget()
+
+        for index, widget in enumerate(widgets):
+            row = index // num_columns
+            col = index % num_columns
+            widget.grid(row=row, column=col, padx=5, pady=5, sticky="ew")
+
+        for col in range(num_columns):
+            container.grid_columnconfigure(col, weight=1, minsize=widget_width)
+
+
+   
     def on_taille_entete_change(self, *args):
         """
         Met à jour la fin de l'en-tête 
