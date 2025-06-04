@@ -14,19 +14,21 @@ from structure.Selection_col import Selection_col
 import os
 import json
 from pathlib import Path
+import ttkbootstrap as ttkb
+from ttkbootstrap.constants import *
 import threading
+
 import webbrowser
 
 
 
-class ExcelTesterApp(tk.Frame):
+class ExcelTesterApp(ttkb.Frame):
     """Page pour detecter les erreurs avec des tests des fichiers Excel."""
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
         super().__init__(parent)
         self.Parent = parent
-   
 
         
         self.fichier_path = None
@@ -103,6 +105,7 @@ class ExcelTesterApp(tk.Frame):
         self.results_frame.pack(fill='both', expand=True, padx=10, pady=5)
         self.error_details_frame.pack(fill='both', expand=True, padx=10, pady=5)
         
+        self.desactivation_bouton()
         
         self.register_scrollable_widgets()
         
@@ -168,7 +171,7 @@ class ExcelTesterApp(tk.Frame):
         self.fichier_entry = tk.Entry(self.file_frame, width=60)
         self.widgets_file_frame.append(self.fichier_entry)
 
-        parcourir_btn = tk.Button(self.file_frame, text="Parcourir", command=self.controller.bind_button(self.choisir_fichier), width=15)
+        parcourir_btn = ttkb.Button(self.file_frame, text="Parcourir", command=self.controller.bind_button(self.choisir_fichier), width=15)
         self.widgets_file_frame.append(parcourir_btn)
 
         self.feuille_combo = ttk.Combobox(self.file_frame, textvariable=self.feuille_nom, state="readonly", width=20)
@@ -188,10 +191,10 @@ class ExcelTesterApp(tk.Frame):
         self.widgets_file_frame.append(entete_frame)
 
 
-        detail_btn = tk.Button(self.file_frame, text="detail", command=self.ouvrir_popup_manipulation, width=10)
-        self.widgets_file_frame.append(detail_btn)
+        self.detail_btn = ttkb.Button(self.file_frame, text="detail", command=self.ouvrir_popup_manipulation, width=10)
+        self.widgets_file_frame.append(self.detail_btn)
 
-        aide_btn = tk.Button(self.file_frame, text="❓ Aide", command=self.ouvrir_aide, width=10)
+        aide_btn = ttkb.Button(self.file_frame, text="❓ Aide", command=self.ouvrir_aide, width=10)
         self.widgets_file_frame.append(aide_btn)
 
 
@@ -200,7 +203,7 @@ class ExcelTesterApp(tk.Frame):
 
         return self.file_frame
 
-    def arrange_widgets_file_frame(self, container, widgets, event=None):
+    def arrange_widgets_file_frame(self, container:tk.Frame, widgets, event=None):
         container.update_idletasks()
         width = container.winfo_width()
         widget_width = 150  # largeur minimale estimée par widget
@@ -219,7 +222,7 @@ class ExcelTesterApp(tk.Frame):
             widget.grid(row=row, column=col, padx=5, pady=5, sticky="ew")
 
         for col in range(num_columns):
-            container.grid_columnconfigure(col, weight=1, minsize=widget_width)
+            container.grid_columnconfigure(col, weight=1)
 
 
 
@@ -288,8 +291,12 @@ class ExcelTesterApp(tk.Frame):
                 self.feuille_combo.set(xls.sheet_names[0])
                 self.afficher_excel()
                 self.lien_fichier()
+                self.activation_bouton()
             except Exception as e:
                 messagebox.showerror("Erreur", f"Impossible de lire les feuilles du fichier : {e}")
+
+
+
     def lien_fichier(self):
         """Crée un lien cliquable pour ouvrir le fichier, en supprimant le précédent si nécessaire."""
         # Si le label existe déjà, le détruire avant d'en créer un nouveau
@@ -390,7 +397,7 @@ class ExcelTesterApp(tk.Frame):
 
             ignore_lignes_vides.set(True)
 
-        tk.Button(frame_cb, text="Réinitialisation", command=reset_valeur).pack(side="left", padx=10)
+        ttkb.Button(frame_cb, text="Réinitialisation", command=reset_valeur).pack(side="left", padx=10)
 
         # ⚠️ Zone de message d'erreur
         label_erreur = tk.Label(popup, text="", fg="red", bg="#f4f4f4", font=("Segoe UI", 9, "italic"))
@@ -439,8 +446,8 @@ class ExcelTesterApp(tk.Frame):
 
             popup.destroy()
 
-        tk.Button(frame_btns, text="✅ Appliquer", command=appliquer_parametres).pack(side="left", padx=10)
-        tk.Button(frame_btns, text="❌ Annuler", command=popup.destroy).pack(side="left", padx=10)
+        ttkb.Button(frame_btns, text="✅ Appliquer", command=appliquer_parametres).pack(side="left", padx=10)
+        ttkb.Button(frame_btns, text="❌ Annuler", command=popup.destroy).pack(side="left", padx=10)
 
 
 # Champs de test
@@ -451,31 +458,31 @@ class ExcelTesterApp(tk.Frame):
 
 
         # Créer les boutons et les stocker dans une liste
-        boutons = []
+        boutons_tests = []
 
-        btn1 = tk.Button(self.frame_btn_test, text="Ajouter un test générique", command=self.controller.bind_button(self.popup_ajouter_test_gen))
+        self.btn_popup_ajouter_test_gen = ttkb.Button(self.frame_btn_test, text="Ajouter un test générique", command=self.controller.bind_button(self.popup_ajouter_test_gen))
         # btn1.pack(side="left", padx=10)
-        boutons.append(btn1)
+        boutons_tests.append(self.btn_popup_ajouter_test_gen)
 
-        btn2 = tk.Button(self.frame_btn_test, text="Ajouter un test spécifique", command=self.controller.bind_button(self.popup_ajouter_test_spe))
+        self.btn_popup_ajouter_test_spe = ttkb.Button(self.frame_btn_test, text="Ajouter un test spécifique", command=self.controller.bind_button(self.popup_ajouter_test_spe))
         # btn2.pack(side="left", padx=10)
-        boutons.append(btn2)
+        boutons_tests.append(self.btn_popup_ajouter_test_spe)
 
-        btn3 = tk.Button(self.frame_btn_test, text="Exécuter les tests", command=self.controller.bind_button(self.executer_tests))
+        self.btn_executer_tests = ttkb.Button(self.frame_btn_test, text="Exécuter les tests", command=self.controller.bind_button(self.executer_tests))
         # btn3.pack(side="left", padx=10)
-        boutons.append(btn3)
+        boutons_tests.append(self.btn_executer_tests)
 
-        btn4 = tk.Button(self.frame_btn_test, text="💾 Sauvegarder les tests", command=self.controller.bind_button(self.sauvegarder_tests))
+        self.btn_sauvegarder_tests = ttkb.Button(self.frame_btn_test, text="💾 Sauvegarder les tests", command=self.controller.bind_button(self.sauvegarder_tests))
         # btn4.pack(side="left", padx=10)
-        boutons.append(btn4)
+        boutons_tests.append(self.btn_sauvegarder_tests)
 
-        btn5 = tk.Button(self.frame_btn_test, text="📂 Importer des tests", command=self.controller.bind_button(self.importer_tests))
+        self.btn_importer_tests = ttkb.Button(self.frame_btn_test, text="📂 Importer des tests", command=self.controller.bind_button(self.importer_tests))
         # btn5.pack(side="left", padx=10)
-        boutons.append(btn5)
+        boutons_tests.append(self.btn_importer_tests)
 
         # Appliquer la fonction pour organiser les boutons
-        # self.arrange_widgets_file_frame(self.frame_btn_test, boutons)
-        self.frame_btn_test.bind("<Configure>", lambda event: self.arrange_widgets_file_frame(self.frame_btn_test, boutons))
+        # self.arrange_widgets_file_frame(self.frame_btn_test, boutons_tests)
+        self.frame_btn_test.bind("<Configure>", lambda event: self.arrange_widgets_file_frame(self.frame_btn_test, boutons_tests))
 
 
         return self.frame_btn_test
@@ -485,18 +492,25 @@ class ExcelTesterApp(tk.Frame):
         self.test_list_frame = tk.LabelFrame(self.scrollable_frame, text="2. Liste des tests", bg="#f4f4f4")
         self.test_list_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        # Détail des tests
-        self.test_listbox = tk.Listbox(self.test_list_frame, height=5, selectmode="extended")
+        # Frame pour la Listbox et la scrollbar côte à côte
+        list_frame = tk.Frame(self.test_list_frame, bg="#f4f4f4")
+        list_frame.pack(fill="both", expand=True)
+
+        # Listbox
+        self.test_listbox = tk.Listbox(list_frame, height=5, selectmode="extended")
         self.test_listbox.pack(side="left", fill="both", expand=True)
 
-        scrollbar_list = tk.Scrollbar(self.test_list_frame, command=self.test_listbox.yview)
+        # Scrollbar attachée à la Listbox
+        scrollbar_list = tk.Scrollbar(list_frame, command=self.test_listbox.yview)
         scrollbar_list.pack(side="right", fill="y")
         self.test_listbox.config(yscrollcommand=scrollbar_list.set)
+
+        # Double clic sur la liste
         self.test_listbox.bind("<Double-Button-1>", self.afficher_details_popup)
 
-        # Retirer les tests
-        tk.Button(self.test_list_frame, text="Retirer le test sélectionné", command=self.supprimer_test).pack(pady=5)
-        
+        # Bouton pour retirer le test sélectionné
+        ttkb.Button(self.test_list_frame, text="Retirer le test sélectionné", command=self.supprimer_test).pack(pady=5)
+
         return self.test_list_frame
 
     def supprimer_test(self):
@@ -700,7 +714,7 @@ class ExcelTesterApp(tk.Frame):
         self.excel_preview_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
         # Créer le Treeview avec une colonne pour les numéros de ligne
-        self.table = ttk.Treeview(self.excel_preview_frame, show="tree headings", height=15)
+        self.table = ttk.Treeview(self.excel_preview_frame, show="tree headings", height=15,style="Custom.Treeview")
         self.table.grid(row=0, column=0, sticky="nsew")
 
         # Scrollbars attachées au LabelFrame
@@ -722,7 +736,7 @@ class ExcelTesterApp(tk.Frame):
         self.table["columns"] = col_names
 
         self.table.heading("#0", text="Ligne", anchor="center")
-        self.table.column("#0", width=40, minwidth=30, anchor="center", stretch=False)
+        self.table.column("#0", width=50, minwidth=30, anchor="center", stretch=False)
         for name in col_names:
             self.table.heading(name, text=name)
             self.table.column(name, anchor="center", width=120, minwidth=100, stretch=True)
@@ -889,22 +903,29 @@ class ExcelTesterApp(tk.Frame):
         self.error_details_frame = tk.LabelFrame(self.scrollable_frame, text="5. Détails des erreurs", bg="#f4f4f4")
         self.error_details_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        self.erreur_table = ttk.Treeview(self.error_details_frame, columns=("Ligne", "Colonne", "Valeur"), show="headings")
+        # Frame pour contenir la Treeview et les scrollbar
+        tree_frame = tk.Frame(self.error_details_frame, bg="#f4f4f4")
+        tree_frame.pack(fill="both", expand=True)
+
+        # La Treeview
+        self.erreur_table = ttk.Treeview(tree_frame, columns=("Ligne", "Colonne", "Valeur"), show="headings")
         self.erreur_table.heading("Ligne", text="Ligne")
         self.erreur_table.heading("Colonne", text="Colonne")
         self.erreur_table.heading("Valeur", text="Valeur d'erreur")
         self.erreur_table.pack(side="left", fill="both", expand=True)
 
-        # Barres de défilement pour les détails des erreurs
-        err_scroll_y = tk.Scrollbar(self.error_details_frame, orient="vertical", command=self.erreur_table.yview)
+        # Barre de défilement verticale
+        err_scroll_y = tk.Scrollbar(tree_frame, orient="vertical", command=self.erreur_table.yview)
         err_scroll_y.pack(side="right", fill="y")
+
+        # Barre de défilement horizontale
         err_scroll_x = tk.Scrollbar(self.error_details_frame, orient="horizontal", command=self.erreur_table.xview)
         err_scroll_x.pack(fill="x")
 
+        # Lier les scrollbar à la Treeview
         self.erreur_table.configure(yscrollcommand=err_scroll_y.set, xscrollcommand=err_scroll_x.set)
+
         return self.error_details_frame
-
-
         # texte.config(state="disabled")
 
 
@@ -962,6 +983,30 @@ class ExcelTesterApp(tk.Frame):
             # messagebox.showerror("Erreur", f"Impossible de construire le dictionnaire d'en-tête : {e}")
             return {}
    
+
+# Activation/desactivation des element =========================================================================================================
+    def activation_bouton(self):
+        self.taille_entete_entry.config(state="normal")
+        self.detail_btn.config(state="normal")
+
+        self.btn_popup_ajouter_test_gen.config(state="normal")
+        self.btn_popup_ajouter_test_spe.config(state="normal")
+        self.btn_executer_tests.config(state="normal")
+        self.btn_sauvegarder_tests.config(state="normal")
+        self.btn_importer_tests.config(state="normal")
+
+    def desactivation_bouton(self):
+        #entete
+        self.taille_entete_entry.config(state="disabled")
+        self.detail_btn.config(state="disabled")
+
+        self.btn_popup_ajouter_test_gen.config(state="disabled")
+        self.btn_popup_ajouter_test_spe.config(state="disabled")
+        self.btn_executer_tests.config(state="disabled")
+        self.btn_sauvegarder_tests.config(state="disabled")
+        self.btn_importer_tests.config(state="disabled")
+
+
 
 
 # Definition des tests =========================================================================================================
@@ -1047,7 +1092,7 @@ class ExcelTesterApp(tk.Frame):
             popup.destroy()
 
         # Bouton pour ajouter le test
-        tk.Button(popup, text="Ajouter le test", command=ajouter).grid(row=6, column=1, pady=10)
+        ttkb.Button(popup, text="Ajouter le test", command=ajouter).grid(row=6, column=1, pady=10)
 
     def popup_ajouter_test_spe(self):
         """Ouvre un popup pour ajouter un test spécifique."""
@@ -1195,7 +1240,7 @@ class ExcelTesterApp(tk.Frame):
             self.test_listbox.insert(tk.END, f"[SPE] {nom} ({type_selected})")
             popup.destroy()
 
-        tk.Button(popup, text="Ajouter le test", command=ajouter).grid(row=ligne + 6, column=1, pady=10)
+        ttkb.Button(popup, text="Ajouter le test", command=ajouter).grid(row=ligne + 6, column=1, pady=10)
 
 # Exécuter les tests =========================================================================================================
 

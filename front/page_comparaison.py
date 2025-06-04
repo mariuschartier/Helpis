@@ -1,5 +1,7 @@
 from tkinter import filedialog, messagebox, ttk,simpledialog
 import tkinter as tk
+import ttkbootstrap as ttkb
+from ttkbootstrap.constants import *
 import pandas as pd
 
 
@@ -17,7 +19,7 @@ from back.tests_statistiques.courbes import plot_histogram_normal,plot_qqplot, p
 from fonctions import to_int
 
 
-class ComparePage(tk.Frame):
+class ComparePage(ttkb.Frame):
     """ Page de comparaison de fichiers Excel pour effectuer des tests statistiques.
     Cette page permet de charger un fichier Excel, d'afficher un aperçu de son contenu,
     de sélectionner des tests statistiques et d'afficher les résultats.
@@ -28,7 +30,7 @@ class ComparePage(tk.Frame):
             parent (tk.Frame): Le parent de cette page.
             controller (Controller): Le contrôleur de l'application.
         """
-        super().__init__(parent, bg="#f4f4f4")
+        super().__init__(parent)
         self.controller = controller
         self.comparateur = ComparateurFichiers()
         self.feuille_nom = tk.StringVar()
@@ -62,6 +64,8 @@ class ComparePage(tk.Frame):
         self.create_result_tag()
         self.create_test_selector()
 
+        self.desactivation_bouton()
+
 
 # frame de test ==========================================================
 # Champ de chargement du fichier et de l'entete
@@ -79,7 +83,7 @@ class ComparePage(tk.Frame):
         self.fichier_entry = tk.Entry(self.file_frame, width=60)
         self.widgets_file_frame.append(self.fichier_entry)
 
-        parcourir_btn = tk.Button(self.file_frame, text="Parcourir", command=self.controller.bind_button(self.choisir_fichier), width=15)
+        parcourir_btn = ttkb.Button(self.file_frame, text="Parcourir", command=self.controller.bind_button(self.choisir_fichier), width=15)
         self.widgets_file_frame.append(parcourir_btn)
 
         self.feuille_combo = ttk.Combobox(self.file_frame, textvariable=self.feuille_nom, state="readonly", width=20)
@@ -99,10 +103,10 @@ class ComparePage(tk.Frame):
         self.widgets_file_frame.append(entete_frame)
 
 
-        detail_btn = tk.Button(self.file_frame, text="detail", command=self.ouvrir_popup_manipulation, width=10)
+        detail_btn = ttkb.Button(self.file_frame, text="detail", command=self.ouvrir_popup_manipulation, width=10)
         self.widgets_file_frame.append(detail_btn)
 
-        aide_btn = tk.Button(self.file_frame, text="❓ Aide", command=self.ouvrir_aide, width=10)
+        aide_btn = ttkb.Button(self.file_frame, text="❓ Aide", command=self.ouvrir_aide, width=10)
         self.widgets_file_frame.append(aide_btn)
 
 
@@ -132,8 +136,6 @@ class ComparePage(tk.Frame):
         for col in range(num_columns):
             container.grid_columnconfigure(col, weight=1, minsize=widget_width)
 
-
-   
     def on_taille_entete_change(self, *args):
         """
         Met à jour la fin de l'en-tête 
@@ -195,6 +197,7 @@ class ComparePage(tk.Frame):
             self.feuille_combo.set(xls.sheet_names[0])
             self.ajouter_feuille()
             self.afficher_excel()
+            self.activation_bouton_choix_fichier()
         except Exception as e:
             messagebox.showerror("Erreur", f"Erreur de lecture du fichier : {e}")
                
@@ -344,7 +347,7 @@ class ComparePage(tk.Frame):
 
             ignore_lignes_vides.set(True)
             
-        tk.Button(frame_cb, text="Réinitialisation", command=reset_valeur).pack(side="left", padx=10)
+        ttkb.Button(frame_cb, text="Réinitialisation", command=reset_valeur).pack(side="left", padx=10)
 
 
             
@@ -394,8 +397,8 @@ class ComparePage(tk.Frame):
             self.taille_entete_entry.insert(0, str(taille_entete))
             popup.destroy()
 
-        tk.Button(frame_btns, text="✅ Appliquer", command=appliquer).pack(side="left", padx=10)
-        tk.Button(frame_btns, text="❌ Annuler", command=popup.destroy).pack(side="left", padx=10)
+        ttkb.Button(frame_btns, text="✅ Appliquer", command=appliquer).pack(side="left", padx=10)
+        ttkb.Button(frame_btns, text="❌ Annuler", command=popup.destroy).pack(side="left", padx=10)
 
 
 
@@ -455,7 +458,7 @@ class ComparePage(tk.Frame):
         self.table["columns"] = col_names
 
         self.table.heading("#0", text="Ligne", anchor="center")
-        self.table.column("#0", width=40, minwidth=30, anchor="center", stretch=False)
+        self.table.column("#0", width=50, minwidth=30, anchor="center", stretch=False)
         for name in col_names:
             self.table.heading(name, text=name)
             self.table.column(name, anchor="center", width=120, minwidth=100, stretch=True)
@@ -531,6 +534,22 @@ class ComparePage(tk.Frame):
 
 
 
+# Activation/desactivation des element =========================================================================================================
+    def activation_bouton_choix_fichier(self):
+        self.taille_entete_entry.config(state="normal")
+        self.detail_btn.config(state="normal")
+
+    
+
+    def desactivation_bouton(self):
+        #entete
+        self.taille_entete_entry.config(state="disabled")
+        self.detail_btn.config(state="disabled")
+
+        self.bouton_execution.config(state="disabled")
+        self.bouton_courbe.config(state="disabled")
+
+
 
 
 # SELECTION TESTS ====================================================================================================================
@@ -592,8 +611,8 @@ class ComparePage(tk.Frame):
         # self.col_groupe2.grid(row=1, column=3, padx=5, pady=2)
 
         # Bouton d'exécution
-        tk.Button(self.test_frame, text="Exécuter le test", command=self.executer_test_general).pack(side="left", padx=10)
-        tk.Button(self.test_frame, text="afficher courbe variable", command=self.afficher_courbe_popup).pack(side="left", padx=10)
+        self.bouton_execution = ttkb.Button(self.test_frame, text="Exécuter le test", command=self.executer_test_general).pack(side="left", padx=10)
+        self.bouton_courbe =ttkb.Button(self.test_frame, text="afficher courbe variable", command=self.afficher_courbe_popup).pack(side="left", padx=10)
 
 
         self.update_test_options()
@@ -784,7 +803,7 @@ class ComparePage(tk.Frame):
             except Exception as e:
                 messagebox.showerror("Erreur", f"Erreur lors du tracé : {e}")
 
-        btn_ok = tk.Button(popup, text="Tracer la courbe", command=valider)
+        btn_ok = ttkb.Button(popup, text="Tracer la courbe", command=valider)
         btn_ok.pack(pady=10)
 
 

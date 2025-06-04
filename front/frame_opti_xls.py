@@ -1,6 +1,8 @@
 from back.manipulation import opti_fichier  # ton module de conversion
 from tkinter import filedialog, messagebox, ttk
 import tkinter as tk
+import ttkbootstrap as ttkb
+from ttkbootstrap.constants import *
 from pathlib import Path
 from back.manipulation import opti_xlsx 
 from back.manipulation import opti_separation
@@ -13,7 +15,7 @@ from structure.Selection_col import Selection_col
 import os
 from structure.Entete import Entete
 
-class opti_xls(tk.Frame):
+class opti_xls(ttkb.Frame):
     """
     Page de manipulation des fichiers Excel (.xls et .xlsx).
     Permet de convertir, améliorer, calculer des moyennes et séparer les données.
@@ -46,6 +48,8 @@ class opti_xls(tk.Frame):
         self.champs_xlsx()
         self.champs_separation()
 
+        self.desactivation_bouton()
+
         self.status_label = tk.Label(self, text="", bg="#f4f4f4", fg="green")
         self.status_label.pack(pady=5)
         # self.create_excel_preview_frame()
@@ -67,7 +71,7 @@ class opti_xls(tk.Frame):
         self.fichier_entry = tk.Entry(self.file_frame, width=60)
         self.widgets_file_frame.append(self.fichier_entry)
 
-        parcourir_btn = tk.Button(self.file_frame, text="Parcourir", command=self.controller.bind_button(self.choisir_fichier), width=15)
+        parcourir_btn = ttkb.Button(self.file_frame, text="Parcourir", command=self.controller.bind_button(self.choisir_fichier), width=15)
         self.widgets_file_frame.append(parcourir_btn)
 
         self.feuille_combo = ttk.Combobox(self.file_frame, textvariable=self.feuille_nom, state="readonly", width=20)
@@ -87,11 +91,11 @@ class opti_xls(tk.Frame):
         self.widgets_file_frame.append(entete_frame)
 
 
-        detail_btn = tk.Button(self.file_frame, text="detail", command=self.ouvrir_popup_manipulation, width=10)
-        self.widgets_file_frame.append(detail_btn)
+        self.detail_btn = ttkb.Button(self.file_frame, text="detail", command=self.ouvrir_popup_manipulation, width=10)
+        self.widgets_file_frame.append(self.detail_btn)
 
-        aide_btn = tk.Button(self.file_frame, text="❓ Aide", command=self.ouvrir_aide, width=10)
-        self.widgets_file_frame.append(aide_btn)
+        self.aide_btn = ttkb.Button(self.file_frame, text="❓ Aide", command=self.ouvrir_aide, width=10)
+        self.widgets_file_frame.append(self.aide_btn)
 
 
 
@@ -117,7 +121,7 @@ class opti_xls(tk.Frame):
             widget.grid(row=row, column=col, padx=5, pady=5, sticky="ew")
 
         for col in range(num_columns):
-            container.grid_columnconfigure(col, weight=1, minsize=widget_width)
+            container.grid_columnconfigure(col, weight=1)
 
 
 
@@ -125,81 +129,106 @@ class opti_xls(tk.Frame):
     def choisir_fichier(self):
         """
         Ouvre une boîte de dialogue pour sélectionner un fichier Excel (.xls ou .xlsx)."""
-        dossier_data = Path("sauvegardes/results")
-        dossier_data.mkdir(parents=True, exist_ok=True)  # Crée le dossier s’il n’existe pas
+        try:
+            dossier_data = Path("sauvegardes/results")
+            dossier_data.mkdir(parents=True, exist_ok=True)  # Crée le dossier s’il n’existe pas
+            
+            filepath = filedialog.askopenfilename(
+                filetypes=[("Fichiers Excel", "*.xls;*.xlsx")],
+                initialdir=dossier_data,  # Dossier par défaut
+                title="Choisir un fichier"
+            )
 
-        filepath = filedialog.askopenfilename(
-            filetypes=[("Fichiers Excel", "*.xls;*.xlsx")],
-            initialdir=dossier_data,  # Dossier par défaut
-            title="Choisir un fichier"
-        )
+            if filepath:
+                self.activation_bouton(filepath)
+        except Exception as e:
+            print(f"erreur lors de la lecture du fichier: {e}")
 
-        if filepath:
-            self.fichier_path = filepath
-            self.fichier_entry.delete(0, tk.END)
-            self.fichier_entry.insert(0, filepath)
+    def activation_bouton(self,filepath):
+        self.fichier_path = filepath
+        self.fichier_entry.delete(0, tk.END)
+        self.fichier_entry.insert(0, filepath)
 
-            # Déterminer le type de fichier
-            is_xlsx = filepath.endswith(".xlsx")
-            is_xls = filepath.endswith(".xls")
+        # Déterminer le type de fichier
+        is_xlsx = filepath.endswith(".xlsx")
+        is_xls = filepath.endswith(".xls")
 
-            if is_xlsx:
-                self.btn_ameliorer.config(state="normal")
-                self.btn_moy_jour.config(state="normal")
-                self.btn_moy_semaine.config(state="normal")
-                self.btn_separation.config(state="normal")
-                self.btn_entete_une_ligne.config(state="normal")
-
-
-                self.btn_convertir.config(state="disabled")
-
-            elif is_xls:
-                self.btn_convertir.config(state="normal")
-
-                self.btn_ameliorer.config(state="disabled")
-                self.btn_moy_jour.config(state="disabled")
-                self.btn_moy_semaine.config(state="disabled")
-                self.btn_separation.config(state="disabled")
-                self.btn_entete_une_ligne.config(state="disabled")
-
-            else:
-                self.btn_convertir.config(state="disabled")
-                self.btn_ameliorer.config(state="disabled")
-                self.btn_moy_jour.config(state="disabled")
-                self.btn_moy_semaine.config(state="disabled")
-                self.btn_separation.config(state="disabled")
-                self.btn_entete_une_ligne.config(state="disabled")
+        if is_xlsx:
+            self.btn_ameliorer.config(state="normal")
+            self.btn_moy_jour.config(state="normal")
+            self.btn_moy_semaine.config(state="normal")
+            self.btn_separation.config(state="normal")
+            self.btn_entete_une_ligne.config(state="normal")
+            self.detail_btn.config(state="normal")
+            self.taille_entete_entry.config(state="normal")
 
 
-            if not is_xls:
+            self.btn_convertir.config(state="disabled")
+
+        elif is_xls:
+            self.btn_convertir.config(state="normal")
+
+            self.btn_ameliorer.config(state="disabled")
+            self.btn_moy_jour.config(state="disabled")
+            self.btn_moy_semaine.config(state="disabled")
+            self.btn_separation.config(state="disabled")
+            self.btn_entete_une_ligne.config(state="disabled")
+            self.detail_btn.config(state="disabled")
+            self.taille_entete_entry.config(state="disabled")
+
+        else:
+            self.btn_convertir.config(state="disabled")
+            self.btn_ameliorer.config(state="disabled")
+            self.btn_moy_jour.config(state="disabled")
+            self.btn_moy_semaine.config(state="disabled")
+            self.btn_separation.config(state="disabled")
+            self.btn_entete_une_ligne.config(state="disabled")
+
+
+        if not is_xls:
+            try:
+                # Sélectionner le moteur approprié
+                engine = 'openpyxl' if is_xlsx else None# 'xlrd'
                 try:
-                    # Sélectionner le moteur approprié
-                    engine = 'openpyxl' if is_xlsx else None# 'xlrd'
-                    try:
-                        xls = pd.ExcelFile(filepath, engine=engine)
-                    except ValueError as e:
-                        # Si xlrd échoue pour un .xls spécial, essayer avec openpyxl
-                        if not is_xlsx:
-                            engine = 'openpyxl'
-                            try:
-                                xls = pd.ExcelFile(filepath, engine=engine)
-                            except Exception as e_openpyxl:
-                                raise Exception(f"Erreur avec openpyxl : {e_openpyxl}")
-                        else:
-                            raise Exception(f"Erreur avec xlrd : {e}")
+                    xls = pd.ExcelFile(filepath, engine=engine)
+                except ValueError as e:
+                    # Si xlrd échoue pour un .xls spécial, essayer avec openpyxl
+                    if not is_xlsx:
+                        engine = 'openpyxl'
+                        try:
+                            xls = pd.ExcelFile(filepath, engine=engine)
+                        except Exception as e_openpyxl:
+                            raise Exception(f"Erreur avec openpyxl : {e_openpyxl}")
+                    else:
+                        raise Exception(f"Erreur avec xlrd : {e}")
 
-                    feuilles = xls.sheet_names
+                feuilles = xls.sheet_names
+                self.feuille_combo['values'] = feuilles
+
+                if feuilles:
                     self.feuille_combo['values'] = feuilles
+                    self.feuille_nom.set(feuilles[0])  # Met à jour la variable et le combobox
 
-                    if feuilles:
-                        self.feuille_combo['values'] = feuilles
-                        self.feuille_nom.set(feuilles[0])  # Met à jour la variable et le combobox
+                # Informer de l'extension utilisée
+                print("Le fichier est au format .xlsx" if is_xlsx else "Le fichier est au format .xls")
 
-                    # Informer de l'extension utilisée
-                    print("Le fichier est au format .xlsx" if is_xlsx else "Le fichier est au format .xls")
+            except Exception as e:
+                messagebox.showerror("Erreur", f"Impossible de lire les feuilles du fichier :\n{e}")
 
-                except Exception as e:
-                    messagebox.showerror("Erreur", f"Impossible de lire les feuilles du fichier :\n{e}")
+    def desactivation_bouton(self):
+        #entete
+        self.detail_btn.config(state="disabled")
+        self.taille_entete_entry.config(state="disabled")
+
+        # xls
+        self.btn_convertir.config(state="disabled")
+        #xlsx
+        self.btn_ameliorer.config(state="disabled")
+        self.btn_moy_jour.config(state="disabled")
+        self.btn_moy_semaine.config(state="disabled")
+        self.btn_entete_une_ligne.config(state="disabled")
+        # separation
+        self.btn_separation.config(state="disabled")
 
     def ouvrir_aide(self):
         """
@@ -328,7 +357,7 @@ class opti_xls(tk.Frame):
 
             ignore_lignes_vides.set(True)
             
-        tk.Button(frame_cb, text="Réinitialisation", command=reset_valeur).pack(side="left", padx=10)
+        ttkb.Button(frame_cb, text="Réinitialisation", command=reset_valeur).pack(side="left", padx=10)
 
 
             
@@ -378,8 +407,8 @@ class opti_xls(tk.Frame):
             self.taille_entete_entry.insert(0, str(taille_entete))
             popup.destroy()
 
-        tk.Button(frame_btns, text="✅ Appliquer", command=appliquer).pack(side="left", padx=10)
-        tk.Button(frame_btns, text="❌ Annuler", command=popup.destroy).pack(side="left", padx=10)
+        ttkb.Button(frame_btns, text="✅ Appliquer", command=appliquer).pack(side="left", padx=10)
+        ttkb.Button(frame_btns, text="❌ Annuler", command=popup.destroy).pack(side="left", padx=10)
 
 
 
@@ -392,38 +421,35 @@ class opti_xls(tk.Frame):
         frame_action = tk.LabelFrame(self, text="2. action sur le fichier xls", bg="#f4f4f4")
         frame_action.pack(fill="x", padx=10, pady=5)
     
-        self.btn_convertir = tk.Button(frame_action, text="Convertir en .xlsx", command=self.controller.bind_button(self.convertir_fichier))
+        self.btn_convertir = ttkb.Button(frame_action, text="Convertir en .xlsx", command=self.controller.bind_button(self.convertir_fichier))
         self.btn_convertir.pack(side="left", padx=5)
-        self.btn_convertir.config(state="disabled")
+
     def champs_xlsx(self):
         """"Crée les champs pour manipuler les fichiers Excel (.xlsx)."""
         frame_action = tk.LabelFrame(self, text="3. action sur le fichier xlsx", bg="#f4f4f4")
         frame_action.pack(fill="x", padx=10, pady=5)
 
-        self.btn_ameliorer = tk.Button(frame_action, text="ameliorer le .xlsx", command=self.controller.bind_button(self.ameliorer_fichier_xlsx))
+        self.btn_ameliorer = ttkb.Button(frame_action, text="ameliorer le .xlsx", command=self.controller.bind_button(self.ameliorer_fichier_xlsx))
         self.btn_ameliorer.pack(side="left", padx=5)
 
-        self.btn_moy_jour = tk.Button(frame_action, text="moyenne par jour", command=self.controller.bind_button(self.moyenne_par_jour))
+        self.btn_moy_jour = ttkb.Button(frame_action, text="moyenne par jour", command=self.controller.bind_button(self.moyenne_par_jour))
         self.btn_moy_jour.pack(side="left", padx=5)
 
-        self.btn_moy_semaine = tk.Button(frame_action, text="moyenne par semaine", command=self.controller.bind_button(self.moyenne_par_semaine))
+        self.btn_moy_semaine = ttkb.Button(frame_action, text="moyenne par semaine", command=self.controller.bind_button(self.moyenne_par_semaine))
         self.btn_moy_semaine.pack(side="left", padx=5)
-        self.btn_entete_une_ligne = tk.Button(frame_action, text="Entete en une ligne", command=self.controller.bind_button(self.entete_une_ligne))
+        self.btn_entete_une_ligne = ttkb.Button(frame_action, text="Entete en une ligne", command=self.controller.bind_button(self.entete_une_ligne))
         self.btn_entete_une_ligne.pack(side="left", padx=5)
 
-        self.btn_ameliorer.config(state="disabled")
-        self.btn_moy_jour.config(state="disabled")
-        self.btn_moy_semaine.config(state="disabled")
-        self.btn_entete_une_ligne.config(state="disabled")
+        
 
     def champs_separation(self):
         """Crée les champs pour séparer les données d'un fichier Excel par une colonne choisie."""
         frame_action = tk.LabelFrame(self, text="4. Création de ficier séparer (xlsx)", bg="#f4f4f4")
         frame_action.pack(fill="x", padx=10, pady=5)
-        self.btn_separation = tk.Button(frame_action, text="séparation valeur dans la colonne", command=self.controller.bind_button(self.split_excel_by_column))
+        self.btn_separation = ttkb.Button(frame_action, text="séparation valeur dans la colonne", command=self.controller.bind_button(self.split_excel_by_column))
         self.btn_separation.pack(side="left", padx=5)
 
-        self.btn_separation.config(state="disabled")
+        
 
 
 
@@ -657,7 +683,7 @@ class opti_xls(tk.Frame):
             self.chemin_selectionne = chemin
             popup.destroy()
 
-        btn_ok = tk.Button(popup, text="valider", command=valider)
+        btn_ok = ttkb.Button(popup, text="valider", command=valider)
         btn_ok.pack(pady=10)
 
         self.wait_window(popup)  # Attend que la fenêtre soit fermée

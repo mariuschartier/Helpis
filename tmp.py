@@ -1,46 +1,28 @@
-import tkinter as tk
+import ttkbootstrap as ttkb
+from tkinter import ttk
 
-class WrappingGridApp:
-    def __init__(self, root):
-        self.root = root
-        root.geometry("600x300")
-        root.title("Grille avec wrapping dynamique")
+app = ttkb.Window(themename='litera')
 
-        self.frame = tk.Frame(root)
-        self.frame.pack(fill="both", expand=True)
+style = ttkb.Style()
 
-        self.widgets = []
-        self.num_columns = 4  # Valeur par défaut
+# Définir ton style pour la frame
+style.configure(
+    "Custom.TFrame",
+    background="#ffffff",  # Couleur de fond
+    borderwidth=0,
+    relief='raised'
+)
 
-        for i in range(20):  # 20 widgets pour tester le wrapping
-            btn = tk.Button(self.frame, text=f"Widget {i+1}", width=15)
-            self.widgets.append(btn)
+# Créer la frame avec le style
+frame = ttkb.Frame(app, style="Custom.TFrame")
+frame.pack(fill='both', expand=True, padx=20, pady=20)
 
-        self.arrange_widgets()
+# Ajoute un contenu dans la frame, par exemple un label
+label = ttkb.Label(frame, text="Contenu de la frame")
+label.pack(pady=10)
 
-        self.root.bind("<Configure>", self.on_resize)
+# Ajouter une ligne en bas avec un Separator
+separator = ttk.Separator(app, orient='horizontal')
+separator.pack(fill='x', padx=20, pady=(0, 10))  # Paddings pour positionner la ligne
 
-    def arrange_widgets(self):
-        for widget in self.frame.winfo_children():
-            widget.grid_forget()
-
-        for index, widget in enumerate(self.widgets):
-            row = index // self.num_columns
-            col = index % self.num_columns
-            widget.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
-
-        for col in range(self.num_columns):
-            self.frame.columnconfigure(col, weight=1)
-
-    def on_resize(self, event):
-        width = self.frame.winfo_width()
-        new_columns = max(1, width // 150)  # ajuster la largeur de seuil
-        if new_columns != self.num_columns:
-            self.num_columns = new_columns
-            self.arrange_widgets()
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = WrappingGridApp(root)
-    root.mainloop()
-
+app.mainloop()

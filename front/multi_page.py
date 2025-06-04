@@ -1,87 +1,43 @@
-from front.frame_opti_xls import opti_xls
-from front.page_comparaison import ComparePage
-
-
-import tkinter as tk
-from tkinter import ttk
-from front.app import ExcelTesterApp
-
+import ttkbootstrap as ttkb
+from ttkbootstrap.constants import *
 import threading
 
-class MultiPageApp(tk.Tk):
+from front.frame_opti_xls import opti_xls
+from front.page_comparaison import ComparePage
+from front.app import ExcelTesterApp
+
+class MultiPageApp(ttkb.Window):
     """Application multi-page pour la manipulation de fichiers Excel."""
     def __init__(self):
-        super().__init__()
+        super().__init__(themename="flatly")  # ou autre thème
         self.title("Application Multi-page - Excel Tool")
-        # self.geometry(f"{self.winfo_screenwidth()}x{self.winfo_screenheight()}+0+0")
         self.state('zoomed')
-
+        self.iconbitmap('logo.ico')
+        # Couleurs et style
         self.configure(bg="#f4f4f4")
-        # Apparence
-        # 🎨 Couleurs harmonisées
-        BLEU_PROFOND = "#005f73"
-        VERT_EAU = "#0a9396"
-        VERT_CLAIR = "#94d2bd"
-        FOND_CLAIR = "#e0fbfc"
-        TEXTE_BLEU = "#0077b6"
-        TEXTE_FOND = "#f4f4f4"
+        style = ttkb.Style()
+        style.configure(".", font=('Segoe UI', 10), background="#f4f4f4")
         
-        # Apparence
-        style = ttk.Style()
-        style.theme_use('clam')
-        font_default = ('Segoe UI', 10)
-        ico_path = "logo.ico"
-        self.iconbitmap(ico_path)
-
-        
-        # Style global
-        style.configure(".", font=font_default, background=FOND_CLAIR)
-        
-        # Boutons
-        style.configure("TButton",
-            font=font_default,
-            padding=6,
-            relief="flat",
-            background=BLEU_PROFOND,
-            foreground="white")
-        style.map("TButton",
-            background=[('active', VERT_EAU), ('disabled', '#cccccc')],
-            foreground=[('pressed', 'white'), ('active', 'white')])
-        
-        # Tableaux
-        style.configure("Treeview",
-            font=font_default,
-            rowheight=24,
-            background="white",
-            fieldbackground="white",
-            foreground="black")
-        style.configure("Treeview.Heading",
-            font=('Segoe UI', 10, 'bold'),
-            background=VERT_CLAIR,
-            foreground="black")
-        
-        # Labels
-        style.configure("TLabel", background=FOND_CLAIR, font=font_default)
-        self.configure(bg=FOND_CLAIR)
-        # Navigation
-        nav_frame = tk.Frame(self, bg="#e0e0e0", pady=5)
+        # Style spécifique pour les boutons
+        self.setup_styles()
+        # Barre de navigation
+        nav_frame = ttkb.Frame(self, style="Custom.TFrame")
         nav_frame.pack(side="top", fill="x")
-        tk.Button(nav_frame, text="📊 Verification Excel", command=lambda: self.afficher_page("tests")).pack(side="left", padx=5)
-        tk.Button(nav_frame, text="📁 Manipulation", command=lambda: self.afficher_page("convert")).pack(side="left", padx=5)
-        tk.Button(nav_frame, text="📈 Tests Statistiques", command=lambda: self.afficher_page("compare")).pack(side="left", padx=5)
+        ttkb.Button(nav_frame, text="📊 Verification Excel",  style = "Nav.TButton", command=lambda: self.afficher_page("tests")).pack(side="left", padx=5)
+        ttkb.Button(nav_frame, text="📁 Manipulation",  style = "Nav.TButton", command=lambda: self.afficher_page("convert")).pack(side="left", padx=5)
+        ttkb.Button(nav_frame, text="📈 Tests Statistiques",  style = "Nav.TButton", command=lambda: self.afficher_page("compare")).pack(side="left", padx=5)
+        ttkb.Button(nav_frame, text="❓ Aide",  style = "Nav.TButton", command=self.ouvrir_aide).pack(side="right", padx=5)
 
-        tk.Button(nav_frame, text="❓ Aide", command=self.ouvrir_aide).pack(side="right", padx=5)
-
-        # Container
-        self.container = tk.Frame(self, bg="#f4f4f4")
+        # Conteneur pour les pages
+        self.container = ttkb.Frame(self, style="Custom.TFrame")
         self.container.pack(fill="both", expand=True)
 
         self.pages = {}
         self.init_pages()
         self.afficher_page("tests")
         
-        # icon de cchargement
-        self.loading_label = tk.Label(self.container, text="", fg="green", font=("Segoe UI", 10, "italic"))
+        # Label de chargement
+        self.loading_label = ttkb.Label(self.container, text="", style="TLabel")
         self.loading_label.pack(pady=5)
         self.hide_loading()
 
@@ -99,10 +55,10 @@ class MultiPageApp(tk.Tk):
             print(f"Erreur : page '{nom_page}' non trouvée.")
 
     def ouvrir_aide(self):
-        aide_popup = tk.Toplevel(self)
+        aide_popup = ttkb.Toplevel(self)
         aide_popup.title("Aide - Utilisation")
         aide_popup.geometry("600x400")
-        texte = tk.Text(aide_popup, wrap="word", font=("Segoe UI", 10))
+        texte = ttkb.Text(aide_popup, wrap="word", font=('Segoe UI', 10))
         texte.pack(fill="both", expand=True, padx=10, pady=10)
         contenu = (
             "Bienvenue dans l'application Excel multi-fonctions 🧪\n"
@@ -110,57 +66,150 @@ class MultiPageApp(tk.Tk):
             "2. 📁 Manipulation : permet de manipuler les fichiers .xls et .xlsx(conversion de .xls à .xlsx, formatage de .xlsx).\n"
             "3. 📈 Tests Statistiques : permet d'effectuer des tests statistiques sur les fichiers .xlsx\n"
         )
-        texte.insert(tk.END, contenu)
-        texte.config(state="disabled")
+        texte.insert("end", contenu)
+        texte.configure(state="disabled")
         
     def show_loading(self, message="⏳ Chargement..."):
         if hasattr(self, 'loading_label'):
             self.loading_label.config(text=message)
         else:
-            self.loading_label = tk.Label(self, text=message, bg="#f4f4f4", fg="blue", font=("Segoe UI", 10, "italic"))
+            self.loading_label = ttkb.Label(self, text=message, style="TLabel")
             self.loading_label.pack(side="top", fill="x", pady=2)
     
     def hide_loading(self):
         if hasattr(self, 'loading_label'):
             self.loading_label.destroy()
             del self.loading_label
-        
-
-
+    
     def exec_with_loading(self, func):
-        # Afficher le label de chargement
-        self.loading_label = tk.Label(
-            self.container,
-            text="⏳ Chargement en cours, veuillez patienter...",
-            font=("Segoe UI", 11, "italic"),
-            fg="#0066cc",     # bleu doux
-            bg="#f4f4f4",     # fond cohérent
-        )
-        self.loading_label.pack(pady=10)
-                 
+        self.show_loading()
         def task():
             try:
                 func()
             except Exception as e:
                 print("Erreur pendant l'exécution :", e)
             finally:
-                # Revenir dans le thread principal pour enlever le label
-                self.after(0, self.loading_label.destroy)
-    
+                self.after(0, self.hide_loading)
         threading.Thread(target=task, daemon=True).start()
 
-
-
-        
     def bind_button(self, action):
-        """Associe une fonction à exécuter via le contrôleur avec animation de chargement."""
         return lambda: self.exec_with_loading(action)
     
-    
- 
+    def setup_styles(self):
+        style = ttkb.Style()
+        
+        
+        # Palette de couleurs
+        primary_color = "#006d77"    # Couleur principale (bleu foncé)
+        accent_color = "#83c5be"     # Couleur d'accent (turquoise clair)
+        background_color = "#83c5be" # Couleur de fond (gris clair)
+        header_bg = "#cccccc"        # Couleur pour les en-têtes
+        hover_color = "#090a0a"      # Couleur au survol (active)
+        pressed_color = "#005f73"    # Couleur lors du clic
+
+        # Police principale
+        font_main = ('Segoe UI', 10)
+        font_bold = ('Segoe UI', 10, 'bold')
         
 
+        # Style général pour la fenêtre
+        style.configure('.', background=background_color, font=font_main)
 
+        # Style pour les Labels
+        style.configure("TLabel", background=background_color, font=font_main)
+
+        # Style pour les boutons
+        style.configure("TButton",
+                    font=font_main,
+                    padding=6,
+                    relief="flat",
+                    background="#007BFF",
+                    foreground="#ffffff")
+        style.map("TButton",
+                background=[('active', '#0056b3'), ('disabled', '#000000')],
+                foreground=[('pressed', '#ffffff'), ('active', '#ffffff'), ('active', '#ffffff')])
+        # Style pour les LabelsFrame
+        style.configure("TLabelframe",
+                        background=background_color,
+                        borderwidth=1,
+                        relief="flat")
+        style.configure("TLabelframe.Label",
+                        background=background_color,
+                        font=font_bold)
+        style.configure(
+            "Nav.TButton",
+            font=('Helvetica', 12),
+            padding=10,
+            foreground='white',        # Couleur du texte
+            background='#007BFF',      # Couleur de fond
+     
+            relief='raised'
+        )
+
+        # Modifier le style avec map pour changer l’apparence au survol ou lors du clic
+        style.map(
+            "Nav.TButton",
+            background=[('active', '#0056b3')],
+            relief=[('pressed', 'sunken')]
+)
+
+
+
+
+        # Style pour Treeview
+        style.configure("Treeview",
+                        font=font_main,
+                        rowheight=24,
+                        background="#ffffff",
+                        fieldbackground="#ffffff",
+                        foreground="#000000")
+        style.configure("Treeview.Heading",
+                        font=('Segoe UI', 10, 'bold'),
+                        background=header_bg,
+                        foreground="#000000")
+        style.map("Treeview",
+                background=[('selected', accent_color)],
+                foreground=[('selected', 'white')])
+
+        # Style pour scrollbar (optionnel, pour harmoniser)
+        style.configure("Vertical.TScrollbar", gripcount=0,
+                        background=primary_color,
+                        troughcolor=background_color,
+                        bordercolor=background_color,
+                        arrowcolor="white")
+        style.map("Vertical.TScrollbar",
+                background=[('active', hover_color)])
+        style.configure(
+            "Custom.Treeview",
+            background="#f9f9f9",
+            foreground="#333",
+            rowheight=25,
+            fieldbackground="#f9f9f9",
+            bordercolor="#cccccc",
+            borderwidth=1,
+            font=('Helvetica', 10)
+        )
+
+        # Modifier le style pour la sélection
+        style.map(
+            "Custom.Treeview",
+            background=[('selected', '#3399ff')],
+            foreground=[('selected', '#ffffff')]
+        )
+
+        style.configure(
+            "Custom.TFrame",
+            background="#ffffff",  # Couleur de fond
+            borderwidth=0,
+            relief='raised',
+        )
+
+    # Si vous utilisez d’autres widgets, vous pouvez continuer à personnaliser ici
+
+
+
+
+# Lancement de l'application
 if __name__ == "__main__":
     app = MultiPageApp()
     app.mainloop()
