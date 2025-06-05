@@ -997,7 +997,7 @@ class ExcelTesterApp(ttkb.Frame):
         self.taille_entete_entry.config(state="disabled")
         self.detail_btn.config(state="disabled")
 
-        self.btn_popup_ajouter_test_gen.config(state="disabled")
+        # self.btn_popup_ajouter_test_gen.config(state="disabled")
         self.btn_popup_ajouter_test_spe.config(state="disabled")
         self.btn_executer_tests.config(state="disabled")
         self.btn_sauvegarder_tests.config(state="disabled")

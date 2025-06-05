@@ -549,6 +549,9 @@ class ComparePage(ttkb.Frame):
         self.bouton_execution.config(state="normal")
         self.bouton_courbe.config(state="normal")
 
+    def activation_bouton_choix_courbe(self):
+        self.btn_ok.config(state="normal")
+
     def desactivation_bouton(self):
         #entete
         self.taille_entete_entry.config(state="disabled")
@@ -561,6 +564,8 @@ class ComparePage(ttkb.Frame):
         self.bouton_execution.config(state="disabled")
         self.bouton_courbe.config(state="disabled")
 
+    def desactivation_bouton_choix_courbe(self):
+        self.btn_ok.config(state="disabled")
 
 
 # SELECTION TESTS ====================================================================================================================
@@ -819,12 +824,7 @@ class ComparePage(ttkb.Frame):
         for nom, _ in self.fonctions_courbes:
             listbox.insert(tk.END, nom)
         listbox.pack(fill="both", expand=True, padx=10, pady=5)
-
-        # Appel pour créer la partie de sélection de colonnes
-        
-        
-
-
+        listbox.bind('<<ListboxSelect>>', self.on_listbox_select)
         # Bouton pour tracer la courbe
         def valider():
             selection_courbe = listbox.curselection()
@@ -840,9 +840,9 @@ class ComparePage(ttkb.Frame):
             except Exception as e:
                 messagebox.showerror("Erreur", f"Erreur lors du tracé : {e}")
 
-        btn_ok = ttkb.Button(popup, text="Tracer la courbe", command=valider)
-        btn_ok.pack(pady=10)
-
+        self.btn_ok = ttkb.Button(popup, text="Tracer la courbe", command=valider)
+        self.btn_ok.pack(pady=10)
+        self.desactivation_bouton_choix_courbe()
 
         self.wait_window(popup)
 
@@ -856,6 +856,24 @@ class ComparePage(ttkb.Frame):
         except Exception as e:
             messagebox.showerror("Erreur", f"Erreur lors du traçage du boxplot : {e}")
 
+    def on_listbox_select(self,event):
+        # Récupérer l'instance de la listbox
+        widget = event.widget
+        # Obtenir l’indice de la sélection
+        selection = widget.curselection()
+        if selection:
+            index = selection[0]
+            # Récupérer la valeur sélectionnée
+            selected_value = widget.get(index)
+            print(f"Selected: {selected_value}")
+            # Si vous avez une liste associée à la listbox
+            
+            self.activation_bouton_choix_courbe()
+
+        else:
+            self.desactivation_bouton_choix_courbe()
+
+            print("Aucune sélection")
 
 # FRAME DE RESULTAT ====================================================================================================================
     def create_result_box(self):

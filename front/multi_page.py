@@ -101,7 +101,7 @@ class MultiPageApp(ttkb.Window):
         
         # Palette de couleurs
         primary_color = "#006d77"    # Couleur principale (bleu foncé)
-        accent_color = "#83c5be"     # Couleur d'accent (turquoise clair)
+        accent_color = "#3399ff"     # Couleur d'accent (turquoise clair)
         background_color = "#83c5be" # Couleur de fond (gris clair)
         header_bg = "#cccccc"        # Couleur pour les en-têtes
         hover_color = "#090a0a"      # Couleur au survol (active)
@@ -126,7 +126,7 @@ class MultiPageApp(ttkb.Window):
                     background="#007BFF",
                     foreground="#ffffff")
         style.map("TButton",
-                background=[('active', '#0056b3'), ('disabled', '#000000')],
+                background=[('active', '#0056b3'), ('disabled', "#575757")],
                 foreground=[('pressed', '#ffffff'), ('active', '#ffffff'), ('active', '#ffffff')])
         # Style pour les LabelsFrame
         style.configure("TLabelframe",
