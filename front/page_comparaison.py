@@ -176,7 +176,7 @@ class ComparePage(ttkb.Frame):
         }
         self.maj_feuille()
         self.afficher_excel()
-        # self.reset_combo()
+        self.reset_combo()
         
         self.desactivation_bouton_choix_colonne()
         
@@ -560,7 +560,7 @@ class ComparePage(ttkb.Frame):
         self.bouton_execution.config(state="disabled")
         self.bouton_courbe.config(state="disabled")
 
-    def desactivation_bouton_choix_colonne(self):
+    def desactivation_bouton_choix_colonne(self,):
         self.bouton_execution.config(state="disabled")
         self.bouton_courbe.config(state="disabled")
 
@@ -608,10 +608,12 @@ class ComparePage(ttkb.Frame):
         # le dictionnaire correspond aux valeurs différentes de la colonne col_groupe
         self.col_groupe1_label = tk.Label(self.grid_frame, text="Groupe 1 :", bg="#f4f4f4")
         self.groupe1_selection = Selection_col(self.dico_groupe)
+        self.groupe1_selection.action_selection = self.on_colonne_change
         self.col_groupe1 = self.groupe1_selection.get_frame_selection_grid( self.grid_frame,0,5)
 
         self.col_groupe2_label = tk.Label(self.grid_frame, text="Groupe 2 :", bg="#f4f4f4")
         self.groupe2_selection = Selection_col(self.dico_groupe)
+        self.groupe2_selection.action_selection = self.on_colonne_change
         self.col_groupe2 = self.groupe2_selection.get_frame_selection_grid( self.grid_frame,1,5)
 
         # Disposition en 2 lignes
@@ -661,6 +663,7 @@ class ComparePage(ttkb.Frame):
         else:
             options = []
             self.hide_conditional_fields()
+        self.on_colonne_change()
 
         self.test_combo["values"] = options
         self.test_combo.set(options[0] if options else "")
@@ -731,12 +734,32 @@ class ComparePage(ttkb.Frame):
         self.groupe_selection.maj_donnees(self.dico_structure)
         self.groupe1_selection.maj_donnees(self.dico_groupe)
         self.groupe2_selection.maj_donnees(self.dico_groupe)
+        self.on_colonne_change()
 
     def on_colonne_change(self):
+        theme = self.theme_var.get()
+
         if self.var_selection.chemin !="":
             self.activation_bouton_choix_colonne()
+
+            if theme == "Homogénéité des variances" :
+                if self.groupe_selection.chemin!="":
+                    self.activation_bouton_choix_colonne()
+                else:
+                    self.desactivation_bouton_choix_colonne()
+
+            elif (theme =="Comparaison de groupes" or theme == "Moyennes hebdomadaires")  :
+                if self.groupe_selection.chemin!="":                
+                    if self.groupe1_selection.chemin!="" and self.groupe2_selection.chemin!="":
+                        self.activation_bouton_choix_colonne()
+                    else:
+                        self.desactivation_bouton_choix_colonne()
+
+                else:
+                    self.desactivation_bouton_choix_colonne()
         else:            
             self.desactivation_bouton_choix_colonne()
+
 
     def dico_colonne_groupe(self):
         """ Construit un dictionnaire des groupes à partir de la colonne sélectionnée."""
@@ -781,6 +804,8 @@ class ComparePage(ttkb.Frame):
 
         self.groupe2_selection = Selection_col(self.dico_groupe)
         self.col_groupe2 = self.groupe2_selection.get_frame_selection_grid( self.grid_frame,1,5)
+
+        self.hide_conditional_fields()
 
 
     # Tracer des courbes 
@@ -874,6 +899,8 @@ class ComparePage(ttkb.Frame):
             self.desactivation_bouton_choix_courbe()
 
             print("Aucune sélection")
+
+
 
 # FRAME DE RESULTAT ====================================================================================================================
     def create_result_box(self):

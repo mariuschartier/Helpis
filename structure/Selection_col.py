@@ -19,7 +19,7 @@ class Selection_col:
         """Met à jour la structure d'entête avec une nouvelle structure."""
         self.structure_entete = structure_entete
         self.colonne_combo['values'] = list(self.structure_entete.keys())
-        self.chemin = ""
+        # self.chemin = ""
 
         # print(self.structure_entete)
 
