@@ -58,7 +58,7 @@ class ComparePage(ttkb.Frame):
         self.create_file_frame()
 
         self.create_excel_preview_frame()
-        self.test_frame = tk.LabelFrame(self, text="3. Sélection et exécution de tests statistiques", bg="#f4f4f4")
+        self.test_frame = ttkb.LabelFrame(self, text="3. Sélection et exécution de tests statistiques")
         self.test_frame.pack(fill="x", padx=10, pady=5)
         self.create_result_box()
         self.create_result_tag()
@@ -72,7 +72,7 @@ class ComparePage(ttkb.Frame):
     
     def create_file_frame(self):
         """Crée le cadre pour charger le fichier Excel et configurer l'en-tête avec wrapping dynamique et taille minimale."""
-        self.file_frame = tk.LabelFrame(self, text="1. Charger un fichier Excel", bg="#f4f4f4")
+        self.file_frame = ttkb.LabelFrame(self, text="1. Charger un fichier Excel")
         self.file_frame.pack(fill="x", expand=False, padx=10, pady=5)
 
         self.taille_entete_var = tk.StringVar()
@@ -438,7 +438,7 @@ class ComparePage(ttkb.Frame):
     def create_excel_preview_frame(self):
         """Crée le cadre pour l'aperçu du fichier Excel."""
         # Créer un LabelFrame
-        self.excel_preview_frame = tk.LabelFrame(self, text="3. Aperçu du fichier Excel", bg="#f4f4f4")
+        self.excel_preview_frame = ttkb.LabelFrame(self, text="3. Aperçu du fichier Excel")
         self.excel_preview_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
         # Créer le Treeview avec une colonne pour les numéros de ligne
@@ -906,7 +906,7 @@ class ComparePage(ttkb.Frame):
     def create_result_box(self):
         """ Crée la zone de résultats pour afficher les résultats des tests statistiques."""
         # Cadre pour les résultats du test
-        self.result_frame = tk.LabelFrame(self, text="4. Résultats du test", bg="#f4f4f4")
+        self.result_frame = ttkb.LabelFrame(self, text="4. Résultats du test")
         self.result_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
         # Barre de défilement verticale

@@ -160,7 +160,7 @@ class ExcelTesterApp(ttkb.Frame):
     
     def create_file_frame(self):
         """Crée le cadre pour charger le fichier Excel et configurer l'en-tête avec wrapping dynamique et taille minimale."""
-        self.file_frame = tk.LabelFrame(self.scrollable_frame, text="1. Charger un fichier Excel", bg="#f4f4f4")
+        self.file_frame = ttkb.LabelFrame(self.scrollable_frame, text="1. Charger un fichier Excel")
         self.file_frame.pack(fill="x", expand=False, padx=10, pady=5)
 
         self.taille_entete_var = tk.StringVar()
@@ -174,7 +174,7 @@ class ExcelTesterApp(ttkb.Frame):
         parcourir_btn = ttkb.Button(self.file_frame, text="Parcourir", command=self.controller.bind_button(self.choisir_fichier), width=15)
         self.widgets_file_frame.append(parcourir_btn)
 
-        self.feuille_combo = ttk.Combobox(self.file_frame, textvariable=self.feuille_nom, state="readonly", width=20)
+        self.feuille_combo = ttkb.Combobox(self.file_frame, textvariable=self.feuille_nom, state="readonly", width=20)
         self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.afficher_excel())
         self.widgets_file_frame.append(self.feuille_combo)
 
@@ -486,7 +486,7 @@ class ExcelTesterApp(ttkb.Frame):
     
     def create_test_list_frame(self):
         """Crée le cadre pour la liste des tests."""
-        self.test_list_frame = tk.LabelFrame(self.scrollable_frame, text="2. Liste des tests", bg="#f4f4f4")
+        self.test_list_frame = ttkb.LabelFrame(self.scrollable_frame, text="2. Liste des tests")
         self.test_list_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
         # Frame pour la Listbox et la scrollbar côte à côte
@@ -707,7 +707,7 @@ class ExcelTesterApp(ttkb.Frame):
     def create_excel_preview_frame(self):
         """Crée le cadre pour l'aperçu du fichier Excel."""
         # Créer un LabelFrame
-        self.excel_preview_frame = tk.LabelFrame(self.scrollable_frame, text="3. Aperçu du fichier Excel", bg="#f4f4f4")
+        self.excel_preview_frame = ttkb.LabelFrame(self.scrollable_frame, text="3. Aperçu du fichier Excel")
         self.excel_preview_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
         # Créer le Treeview avec une colonne pour les numéros de ligne
@@ -856,7 +856,7 @@ class ExcelTesterApp(ttkb.Frame):
     def create_results_frame(self):
         """Crée le cadre pour afficher les résultats des tests."""
         # Cadre pour les résultats du test
-        self.results_frame = tk.LabelFrame(self, text="4. Résultats du test", bg="#f4f4f4")
+        self.results_frame = ttkb.LabelFrame(self, text="4. Résultats du test")
         self.results_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
         # Barre de défilement verticale
@@ -897,7 +897,7 @@ class ExcelTesterApp(ttkb.Frame):
 # Affichage des détails des erreurs 
     def create_error_details_frame(self):
         """Crée le cadre pour afficher les détails des erreurs."""
-        self.error_details_frame = tk.LabelFrame(self.scrollable_frame, text="5. Détails des erreurs", bg="#f4f4f4")
+        self.error_details_frame = ttkb.LabelFrame(self.scrollable_frame, text="5. Détails des erreurs")
         self.error_details_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
         # Frame pour contenir la Treeview et les scrollbar

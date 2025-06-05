@@ -60,7 +60,7 @@ class opti_xls(ttkb.Frame):
     
     def create_file_frame(self):
         """Crée le cadre pour charger le fichier Excel et configurer l'en-tête avec wrapping dynamique et taille minimale."""
-        self.file_frame = tk.LabelFrame(self, text="1. Charger un fichier Excel", bg="#f4f4f4")
+        self.file_frame = ttkb.LabelFrame(self, text="1. Charger un fichier Excel")
         self.file_frame.pack(fill="x", expand=False, padx=10, pady=5)
 
         self.taille_entete_var = tk.StringVar()
@@ -418,7 +418,7 @@ class opti_xls(ttkb.Frame):
     def champs_xls(self):
         """
         Crée les champs pour manipuler les fichiers Excel (.xls)."""
-        frame_action = tk.LabelFrame(self, text="2. action sur le fichier xls", bg="#f4f4f4")
+        frame_action = ttkb.LabelFrame(self, text="2. action sur le fichier xls")
         frame_action.pack(fill="x", padx=10, pady=5)
     
         self.btn_convertir = ttkb.Button(frame_action, text="Convertir en .xlsx", command=self.controller.bind_button(self.convertir_fichier))
@@ -426,7 +426,7 @@ class opti_xls(ttkb.Frame):
 
     def champs_xlsx(self):
         """"Crée les champs pour manipuler les fichiers Excel (.xlsx)."""
-        frame_action = tk.LabelFrame(self, text="3. action sur le fichier xlsx", bg="#f4f4f4")
+        frame_action = ttkb.LabelFrame(self, text="3. action sur le fichier xlsx")
         frame_action.pack(fill="x", padx=10, pady=5)
 
         self.btn_ameliorer = ttkb.Button(frame_action, text="ameliorer le .xlsx", command=self.controller.bind_button(self.ameliorer_fichier_xlsx))
@@ -444,7 +444,7 @@ class opti_xls(ttkb.Frame):
 
     def champs_separation(self):
         """Crée les champs pour séparer les données d'un fichier Excel par une colonne choisie."""
-        frame_action = tk.LabelFrame(self, text="4. Création de ficier séparer (xlsx)", bg="#f4f4f4")
+        frame_action = ttkb.LabelFrame(self, text="4. Création de ficier séparer (xlsx)")
         frame_action.pack(fill="x", padx=10, pady=5)
         self.btn_separation = ttkb.Button(frame_action, text="séparation valeur dans la colonne", command=self.controller.bind_button(self.split_excel_by_column))
         self.btn_separation.pack(side="left", padx=5)

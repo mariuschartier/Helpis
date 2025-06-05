@@ -100,9 +100,9 @@ class MultiPageApp(ttkb.Window):
         
         
         # Palette de couleurs
-        primary_color = "#006d77"    # Couleur principale (bleu foncé)
+        primary_color = "#ACACAC"    # Couleur principale (bleu foncé)
         accent_color = "#3399ff"     # Couleur d'accent (turquoise clair)
-        background_color = "#83c5be" # Couleur de fond (gris clair)
+        background_color = "#ffffff" # Couleur de fond (gris clair)
         header_bg = "#cccccc"        # Couleur pour les en-têtes
         hover_color = "#090a0a"      # Couleur au survol (active)
         pressed_color = "#005f73"    # Couleur lors du clic
@@ -179,23 +179,7 @@ class MultiPageApp(ttkb.Window):
                         arrowcolor="white")
         style.map("Vertical.TScrollbar",
                 background=[('active', hover_color)])
-        style.configure(
-            "Custom.Treeview",
-            background="#f9f9f9",
-            foreground="#333",
-            rowheight=25,
-            fieldbackground="#f9f9f9",
-            bordercolor="#cccccc",
-            borderwidth=1,
-            font=('Helvetica', 10)
-        )
-
-        # Modifier le style pour la sélection
-        style.map(
-            "Custom.Treeview",
-            background=[('selected', '#3399ff')],
-            foreground=[('selected', '#ffffff')]
-        )
+  
 
         style.configure(
             "Custom.TFrame",
@@ -203,6 +187,25 @@ class MultiPageApp(ttkb.Window):
             borderwidth=0,
             relief='raised',
         )
+
+        style.configure(
+            "NoBorder.TLabelframe",
+            borderwidth=0,
+            relief='flat'
+        )
+
+
+        style.configure(
+            "Custom.TCombobox",
+            foreground="#333333",  # Couleur du texte
+            background="#e0e0e0",  # Couleur de fond
+            selectbackground="#b0b0b0",  # Couleur lors de la sélection
+            selectforeground="#000000",  # Couleur du texte sélectionné
+            arrowcolor="#ff0000",  # Couleur de la flèche
+            padding=5,
+        )
+
+
 
     # Si vous utilisez d’autres widgets, vous pouvez continuer à personnaliser ici
 
