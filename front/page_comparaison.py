@@ -1007,7 +1007,8 @@ class ComparePage(ttkb.Frame):
         elif theme == "Homogénéité des variances":
             var = self.var_selection.chemin
             groupe = self.groupe_selection.chemin
-
+            print(f"var:{var}")
+            print(f"groupe:{groupe}")
 
 
 

@@ -126,7 +126,7 @@ class MultiPageApp(ttkb.Window):
                     background="#007BFF",
                     foreground="#ffffff")
         style.map("TButton",
-                background=[('active', '#0056b3'), ('disabled', "#575757")],
+                background=[('active', '#0056b3'), ('disabled', "#ACACAC")],
                 foreground=[('pressed', '#ffffff'), ('active', '#ffffff'), ('active', '#ffffff')])
         # Style pour les LabelsFrame
         style.configure("TLabelframe",
