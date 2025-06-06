@@ -611,6 +611,7 @@ class ComparePage(ttkb.Frame):
         self.groupe1_selection.action_selection = self.on_colonne_change
         self.col_groupe1 = self.groupe1_selection.get_frame_selection_grid( self.grid_frame,0,5)
 
+
         self.col_groupe2_label = tk.Label(self.grid_frame, text="Groupe 2 :", bg="#f4f4f4")
         self.groupe2_selection = Selection_col(self.dico_groupe)
         self.groupe2_selection.action_selection = self.on_colonne_change
@@ -734,11 +735,11 @@ class ComparePage(ttkb.Frame):
         self.groupe_selection.maj_donnees(self.dico_structure)
         self.groupe1_selection.maj_donnees(self.dico_groupe)
         self.groupe2_selection.maj_donnees(self.dico_groupe)
-        self.on_colonne_change()
+        self.on_colonne_change()      
 
     def on_colonne_change(self):
         theme = self.theme_var.get()
-
+        print(self.theme_var.get())
         if self.var_selection.chemin !="":
             self.activation_bouton_choix_colonne()
 
@@ -749,7 +750,9 @@ class ComparePage(ttkb.Frame):
                     self.desactivation_bouton_choix_colonne()
 
             elif (theme =="Comparaison de groupes" or theme == "Moyennes hebdomadaires")  :
-                if self.groupe_selection.chemin!="":                
+                print("Comparaison de groupes ou Moyennes hebdomadaires")
+                if self.groupe_selection.chemin!="":    
+                    print(f"{self.groupe1_selection.chemin} and {self.groupe2_selection.chemin}")            
                     if self.groupe1_selection.chemin!="" and self.groupe2_selection.chemin!="":
                         self.activation_bouton_choix_colonne()
                     else:
@@ -796,14 +799,23 @@ class ComparePage(ttkb.Frame):
 
         self.groupe_selection = Selection_col(self.dico_structure)
         self.groupe_selection.action_selection = self.maj_selection_colonne
-
         self.col_groupe = self.groupe_selection.get_frame_selection_grid( self.grid_frame,0,3)
 
         self.groupe1_selection = Selection_col(self.dico_groupe)
+        self.groupe1_selection.action_selection = self.on_colonne_change
         self.col_groupe1 = self.groupe1_selection.get_frame_selection_grid( self.grid_frame,0,5)
 
+        if self.groupe1_selection.action_selection:
+            print("g1")
+        else:
+            print("pas g1")
+
+
         self.groupe2_selection = Selection_col(self.dico_groupe)
+        self.groupe2_selection.action_selection = self.on_colonne_change
         self.col_groupe2 = self.groupe2_selection.get_frame_selection_grid( self.grid_frame,1,5)
+
+
 
         self.hide_conditional_fields()
 
@@ -1006,7 +1018,6 @@ class ComparePage(ttkb.Frame):
 #EXECUTION DES TESTS ====================================================================================================================
     def executer_test_general(self):
         """ Exécute le test statistique sélectionné et affiche les résultats."""
-        
 
         theme = self.theme_var.get()
         methode = self.test_method_var.get()

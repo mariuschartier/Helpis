@@ -72,7 +72,6 @@ class Selection_col:
             selected_col = self.colonne_combo.get()
             if selected_col in self.structure_entete and self.structure_entete[selected_col] != {}:
                 add_combobox_grid(0, self.structure_entete[selected_col])
-            self.colonne_actuelle = get_path()
             self.chemin = get_path()
         self.colonne_combo.bind("<<ComboboxSelected>>", on_colonne_selection)
 
@@ -142,6 +141,8 @@ class Selection_col:
             col1 = self.colonne_combo.get()
             selection = [combo.get() for combo, _ in comboboxes if combo.get()]
             self.chemin = " > ".join([col1] + selection) if col1 else None
+            if self.action_selection:
+                self.action_selection()
             return self.chemin
 
         return get_path
