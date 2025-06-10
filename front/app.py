@@ -292,8 +292,6 @@ class ExcelTesterApp(ttkb.Frame):
             except Exception as e:
                 messagebox.showerror("Erreur", f"Impossible de lire les feuilles du fichier : {e}")
 
-
-
     def lien_fichier(self):
         """Crée un lien cliquable pour ouvrir le fichier, en supprimant le précédent si nécessaire."""
         # Si le label existe déjà, le détruire avant d'en créer un nouveau
@@ -348,7 +346,15 @@ class ExcelTesterApp(ttkb.Frame):
         ]
 
         entries = {}
-        valeurs_par_defaut = self.details_structure if hasattr(self, "details_structure") else {}
+        valeurs_par_defaut = {
+            "entete_debut": 0,
+            "entete_fin": 0,
+            "data_debut": 1,
+            "data_fin": self.df.shape[0],
+            "nb_colonnes_secondaires": 0,
+            "ligne_unite": 0,
+            "ignorer_vide": True
+        }
 
         for label, key in champs:
             frame = tk.Frame(popup, bg="#f4f4f4")
@@ -1135,9 +1141,10 @@ class ExcelTesterApp(ttkb.Frame):
         label_col2.grid(row=ligne, column=0, sticky="w")
         colonne_cible_2_combo = Selection_col(dico)
         colonne_cible_2_combo.get_frame_selection_grid(popup,ligne,1)
+        colonne_cible_2_combo.grid()
 
-        
-        ligne+=int(self.taille_entete_entry.get())
+        ligne += int(self.taille_entete_entry.get())
+        print(ligne)
 
 
         # Champs dynamiques selon le type de test
@@ -1154,14 +1161,16 @@ class ExcelTesterApp(ttkb.Frame):
         label_ratio = tk.Label(popup, text="Ratio attendu :")
         ratio_entry = tk.Entry(popup)
 
-        for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_diff, diff_entry, label_ratio, ratio_entry, label_col2]:
+        for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_diff, diff_entry, label_ratio, ratio_entry,label_col2 ]:
             widget.grid_forget()
-        colonne_cible_2_combo.grid_remove()
+        # colonne_cible_2_combo.grid_remove()
 
-        def afficher_champs_selon_type(event=None,ligne=5):
-            for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_diff, diff_entry, label_ratio, ratio_entry,  label_col2]:
+        def afficher_champs_selon_type(event=None,ligne=ligne):
+            for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_diff, diff_entry, label_ratio, ratio_entry,label_col2]:
                 widget.grid_forget()
             colonne_cible_2_combo.grid_remove()
+            print(ligne)
+
 
             t = type_test.get()
             ligne_i = ligne
@@ -1184,13 +1193,13 @@ class ExcelTesterApp(ttkb.Frame):
 
             elif t =="compare_fix"or t == "compare_ratio":
                 print(ligne_i)
-                label_col2.grid(row=ligne_i, column=0, sticky="w")
+                label_col2.grid(row=ligne, column=0, sticky="w")
+
                 colonne_cible_2_combo.grid()
-                ligne_i += int(self.taille_entete_entry.get())
 
                 # label_val_min.grid(row=ligne_i, column=0, sticky="w")
                 # val_min_entry.grid(row=ligne_i, column=1)
-                ligne_i +=1
+
 
                 if t == "compare_fix":
                     label_diff.grid(row=ligne_i, column=0, sticky="w")
@@ -1201,6 +1210,7 @@ class ExcelTesterApp(ttkb.Frame):
                     label_ratio.grid(row=ligne_i, column=0, sticky="w")
                     ratio_entry.grid(row=ligne_i, column=1)
                     ligne_i +=1
+            
 
 
 
@@ -1215,7 +1225,7 @@ class ExcelTesterApp(ttkb.Frame):
             # Chemins complets des colonnes
             chemin_1 = colonne_cible_1_combo.chemin
             chemin_2 = colonne_cible_2_combo.chemin
-
+            print( chemin_2)
             try:
                 if type_selected == "val_min" or type_selected == "val_entre":
                     val1 = float(val_min_entry.get()) if val_min_entry.get() else None
@@ -1236,8 +1246,8 @@ class ExcelTesterApp(ttkb.Frame):
             self.tests.append((test, type_selected, chemin_1, chemin_2, val1, val2))
             self.test_listbox.insert(tk.END, f"[SPE] {nom} ({type_selected})")
             popup.destroy()
-
-        ttkb.Button(popup, text="Ajouter le test", command=ajouter).grid(row=ligne + 6, column=1, pady=10)
+        print(ligne)
+        ttkb.Button(popup, text="Ajouter le test", command=ajouter).grid(row=ligne+7 , column=1, pady=10)
 
 # Exécuter les tests =========================================================================================================
 

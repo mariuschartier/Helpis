@@ -56,7 +56,7 @@ class Selection_col:
 
                 selection = combo.get()
                 if selection in structure and isinstance(structure[selection], dict) and structure[selection] and structure[selection] != {} :
-                    print(f"Ajout de la combobox pour {selection}")
+                    # print(f"Ajout de la combobox pour {selection}")
                     add_combobox_grid(level + 1, structure[selection])
 
                 self.chemin = get_path()

@@ -739,7 +739,6 @@ class ComparePage(ttkb.Frame):
 
     def on_colonne_change(self):
         theme = self.theme_var.get()
-        print(self.theme_var.get())
         if self.var_selection.chemin !="":
             self.activation_bouton_choix_colonne()
 
@@ -752,7 +751,6 @@ class ComparePage(ttkb.Frame):
             elif (theme =="Comparaison de groupes" or theme == "Moyennes hebdomadaires")  :
                 print("Comparaison de groupes ou Moyennes hebdomadaires")
                 if self.groupe_selection.chemin!="":    
-                    print(f"{self.groupe1_selection.chemin} and {self.groupe2_selection.chemin}")            
                     if self.groupe1_selection.chemin!="" and self.groupe2_selection.chemin!="":
                         self.activation_bouton_choix_colonne()
                     else:
@@ -805,10 +803,7 @@ class ComparePage(ttkb.Frame):
         self.groupe1_selection.action_selection = self.on_colonne_change
         self.col_groupe1 = self.groupe1_selection.get_frame_selection_grid( self.grid_frame,0,5)
 
-        if self.groupe1_selection.action_selection:
-            print("g1")
-        else:
-            print("pas g1")
+
 
 
         self.groupe2_selection = Selection_col(self.dico_groupe)
@@ -902,7 +897,7 @@ class ComparePage(ttkb.Frame):
             index = selection[0]
             # Récupérer la valeur sélectionnée
             selected_value = widget.get(index)
-            print(f"Selected: {selected_value}")
+            # print(f"Selected: {selected_value}")
             # Si vous avez une liste associée à la listbox
             
             self.activation_bouton_choix_courbe()

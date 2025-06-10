@@ -52,7 +52,7 @@ class Test_spe:
         return self.valider_comparaison(
             colonne1=colonne1,
             colonne2=colonne2,
-            condition=lambda x,y: abs(x-y) > difference,
+            condition=lambda x,y: abs(x-y) < difference,
             message=f"Difference < {difference} entre {colonne1} et {colonne2}",
             erreur_message=f"Difference > {difference} entre {colonne1} et {colonne2}",
         )
@@ -63,7 +63,7 @@ class Test_spe:
         return self.valider_comparaison(
             colonne1=colonne1,
             colonne2=colonne2,
-            condition=lambda x,y: abs(x-y) > y*ratio,
+            condition=lambda x,y: abs(x-y) < y*ratio,
             message=f"Difference < {ratio} entre {colonne1} et {colonne2}",
             erreur_message=f"Difference > {ratio} entre {colonne1} et {colonne2}",
         )
@@ -180,6 +180,9 @@ class Test_spe:
             valeurs2 = pd.Series([valeurs2])
 
         masque = condition(valeurs1, valeurs2)
+        # print(f"valeur 1 :{valeurs1}  valeur 2 : {valeurs2}")
+        # print(f"difference :{valeurs1 - valeurs2}  ")
+
         valeurs_invalides1 = valeurs1[~masque]
         valeurs_invalides2 = valeurs2[~masque]
 
@@ -215,7 +218,7 @@ class Test_spe:
                 msg_tmp = f"- Colonne '{col}' : {len(err)} valeurs hors plage.\n"
                 message_final += msg_tmp
 
-                print(msg_tmp)
+            print(msg_tmp)
         print("======================================================================================= \n")
         return message_final
     
