@@ -331,7 +331,7 @@ class ExcelTesterApp(ttkb.Frame):
 
         popup = tk.Toplevel(self)
         popup.title("Paramètres avancés de la feuille")
-        popup.configure(bg="#f4f4f4")
+        popup.configure(bg="#ffffff")
         popup.grab_set()
 
         tk.Label(popup, text="Paramètres de lecture du fichier", font=("Segoe UI", 11, "bold"), bg="#f4f4f4").pack(pady=10)
@@ -1115,36 +1115,37 @@ class ExcelTesterApp(ttkb.Frame):
         popup.title("Ajouter un test spécifique")
         popup.grab_set()
 
-        ligne  = 0
+        ligne  = 0# 0
 
         # Nom du test
         tk.Label(popup, text="Nom du test :").grid(row=ligne, column=0, sticky="w")
-        nom_entry = tk.Entry(popup, width=30)
+        nom_entry = tk.Entry(popup, width=25)
         nom_entry.grid(row=ligne, column=1)
 
-        ligne+=1
+        ligne+=1# 1
         # Type de test
         tk.Label(popup, text="Type de test :").grid(row=ligne, column=0, sticky="w")
         type_test = ttk.Combobox(popup, values=["val_min", "val_max", "val_entre", "compare_fix", "compare_ratio"], state="readonly")
         type_test.grid(row=ligne, column=1)
         type_test.set("val_min")
 
-        ligne+=1
+        ligne+=1# 2
         label_col1 = tk.Label(popup, text="Colonne cible 1 :")
         label_col1.grid(row=ligne, column=0, sticky="w")
         colonne_cible_1_combo = Selection_col(dico)
         colonne_cible_1_combo.get_frame_selection_grid(popup,ligne,1)
 
-        ligne+= int(self.taille_entete_entry.get())
+        ligne+= int(self.taille_entete_entry.get())# 2 + x
 
         label_col2 = tk.Label(popup, text="Colonne cible 2 :")
         label_col2.grid(row=ligne, column=0, sticky="w")
+        print(ligne)
+
         colonne_cible_2_combo = Selection_col(dico)
         colonne_cible_2_combo.get_frame_selection_grid(popup,ligne,1)
         colonne_cible_2_combo.grid()
 
-        ligne += int(self.taille_entete_entry.get())
-        print(ligne)
+        ligne += int(self.taille_entete_entry.get())# 2 + 2x
 
 
         # Champs dynamiques selon le type de test
@@ -1169,12 +1170,10 @@ class ExcelTesterApp(ttkb.Frame):
             for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_diff, diff_entry, label_ratio, ratio_entry,label_col2]:
                 widget.grid_forget()
             colonne_cible_2_combo.grid_remove()
-            print(ligne)
 
 
             t = type_test.get()
             ligne_i = ligne
-            print(ligne_i)
             if t == "val_min":
                 label_val_min.grid(row=ligne_i, column=0, sticky="w")
                 val_min_entry.grid(row=ligne_i, column=1)
@@ -1186,14 +1185,13 @@ class ExcelTesterApp(ttkb.Frame):
             elif t == "val_entre":
                 label_val_min.grid(row=ligne_i, column=0, sticky="w")
                 val_min_entry.grid(row=ligne_i, column=1)
-                ligne_i += 1
+                ligne_i += 1# 3 + x
 
                 label_val_max.grid(row=ligne_i, column=0, sticky="w")
                 val_max_entry.grid(row=ligne_i, column=1)
 
             elif t =="compare_fix"or t == "compare_ratio":
-                print(ligne_i)
-                label_col2.grid(row=ligne, column=0, sticky="w")
+                label_col2.grid(row=ligne-int(self.taille_entete_entry.get()), column=0, sticky="w")
 
                 colonne_cible_2_combo.grid()
 
@@ -1204,12 +1202,14 @@ class ExcelTesterApp(ttkb.Frame):
                 if t == "compare_fix":
                     label_diff.grid(row=ligne_i, column=0, sticky="w")
                     diff_entry.grid(row=ligne_i, column=1)
-                    ligne_i +=1
+                    ligne_i +=1 # 3 + 2x
 
                 else:
+                    print(ligne_i)
+
                     label_ratio.grid(row=ligne_i, column=0, sticky="w")
                     ratio_entry.grid(row=ligne_i, column=1)
-                    ligne_i +=1
+                    ligne_i +=1 # 3 + 2x
             
 
 
