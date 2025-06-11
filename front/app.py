@@ -236,8 +236,7 @@ class ExcelTesterApp(ttkb.Frame):
             else 0
         )
         self.details_structure["ligne_unite"] = self.details_structure["entete_fin"]
-        if self.details_structure["data_debut"] <= self.details_structure["entete_fin"]:
-            self.details_structure["data_debut"] = self.details_structure["entete_fin"]+1
+        self.details_structure["data_debut"] = self.details_structure["entete_fin"]+1
 
         self.enlever_toutes_couleurs()
         self.colorier_lignes_range(
@@ -322,8 +321,8 @@ class ExcelTesterApp(ttkb.Frame):
     def ouvrir_popup_manipulation(self):
         """Ouvre un popup pour configurer les paramètres avancés de la feuille."""
 
-        print("details_structure :")
-        print(self.details_structure)
+        # print("details_structure :")
+        # print(self.details_structure)
 
         if self.df is None:
             messagebox.showerror("Erreur", "Un fichier doit être sélectionné.")
@@ -355,6 +354,8 @@ class ExcelTesterApp(ttkb.Frame):
             "ligne_unite": 0,
             "ignorer_vide": True
         }
+        data  = self.details_structure if hasattr(self, "details_structure") else valeurs_par_defaut
+        
 
         for label, key in champs:
             frame = tk.Frame(popup, bg="#f4f4f4")
@@ -365,13 +366,13 @@ class ExcelTesterApp(ttkb.Frame):
             entry = tk.Entry(frame, validate="key", validatecommand=vcmd)
             entry.pack(side="left", fill="x", expand=True)
 
-            if key == "data_fin" and self.details_structure["data_fin"] is None:
+            if key == "data_fin" and data["data_fin"] is None:
                 try:
                     valeur_defaut = str(self.df.shape[0])
                 except AttributeError:
                     valeur_defaut = ""
             else:
-                valeur_defaut = valeurs_par_defaut.get(key, "")
+                valeur_defaut = data.get(key, "")
 
             entry.insert(0, str(valeur_defaut))
             entries[key] = entry
@@ -438,10 +439,10 @@ class ExcelTesterApp(ttkb.Frame):
             # Appliquer
             valeurs["ignorer_lignes_vides"] = ignore_lignes_vides.get()
             self.details_structure = valeurs
-            print("valeur :")
-            print(valeurs)
-            print("details_structure :")
-            print(self.details_structure)
+            # print("valeur :")
+            # print(valeurs)
+            # print("details_structure :")
+            # print(self.details_structure)
 
             if hasattr(self, "taille_entete_entry"):
                 self.taille_entete_entry.delete(0, tk.END)

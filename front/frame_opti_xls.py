@@ -271,6 +271,9 @@ class opti_xls(ttkb.Frame):
             if self.taille_entete_entry.get().isdigit()
             else 0
         )
+        self.details_structure["ligne_unite"] = self.details_structure["entete_fin"]
+        self.details_structure["data_debut"] = self.details_structure["entete_fin"]+1
+
         # Vérifier si un fichier est chargé
         if self.df is not None:
             try:
@@ -288,62 +291,73 @@ class opti_xls(ttkb.Frame):
     # Ouvrir le popup de manipulation de l'entete detaillée
     def ouvrir_popup_manipulation(self):
         """Ouvre un popup pour configurer les paramètres avancés de la feuille."""
-        if self.df is None:            
-            messagebox.showerror("Erreur", "Un fichier doit etre selectionné.")
+
+        # print("details_structure :")
+        # print(self.details_structure)
+
+        if self.df is None:
+            messagebox.showerror("Erreur", "Un fichier doit être sélectionné.")
             return
+
         popup = tk.Toplevel(self)
         popup.title("Paramètres avancés de la feuille")
-        popup.configure(bg="#f4f4f4")
+        popup.configure(bg="#ffffff")
         popup.grab_set()
 
         tk.Label(popup, text="Paramètres de lecture du fichier", font=("Segoe UI", 11, "bold"), bg="#f4f4f4").pack(pady=10)
-    
+
         champs = [
             ("Début de l'en-tête :", "entete_debut"),
             ("Fin de l'en-tête :", "entete_fin"),
             ("Début des données :", "data_debut"),
             ("Fin des données :", "data_fin"),
             ("Colonnes secondaires :", "nb_colonnes_secondaires"),
-            ("Ligne des unités :", "ligne_unite"),  # 🆕 Champ ajouté
+            ("Ligne des unités :", "ligne_unite"),
         ]
-    
+
         entries = {}
-        valeurs_par_defaut = self.details_structure if hasattr(self, "details_structure") else {}
-    
+        valeurs_par_defaut = {
+            "entete_debut": 0,
+            "entete_fin": 0,
+            "data_debut": 1,
+            "data_fin": self.df.shape[0],
+            "nb_colonnes_secondaires": 0,
+            "ligne_unite": 0,
+            "ignorer_vide": True
+        }
+        data  = self.details_structure if hasattr(self, "details_structure") else valeurs_par_defaut
+        
+
         for label, key in champs:
             frame = tk.Frame(popup, bg="#f4f4f4")
             frame.pack(fill="x", padx=10, pady=2)
             tk.Label(frame, text=label, width=25, anchor="w", bg="#f4f4f4").pack(side="left")
-        
+
             vcmd = (self.register(lambda val: val.isdigit() or val == ""), '%P')
             entry = tk.Entry(frame, validate="key", validatecommand=vcmd)
             entry.pack(side="left", fill="x", expand=True)
-            valeur_defaut = valeurs_par_defaut.get(key, "")
-            if key == "data_fin":
+
+            if key == "data_fin" and data["data_fin"] is None:
                 try:
-                    valeur_defaut = str(self.df.shape[0])  # Nombre de lignes du DataFrame
+                    valeur_defaut = str(self.df.shape[0])
                 except AttributeError:
-                    messagebox.showwarning("Attention", "La feuille de données n'existe pas. La valeur de 'Fin des données' ne peut pas être déterminée.")
                     valeur_defaut = ""
-            if key == "data_fin":
-                try:
-                    entry.insert(0, str(self.df.shape[0]))
-                except AttributeError:
-                    entry.insert(0, "")
             else:
-                entry.insert(0, str(valeur_defaut))  # Initialise avec la valeur par défaut si disponible
-            
+                valeur_defaut = data.get(key, "")
+
+            entry.insert(0, str(valeur_defaut))
             entries[key] = entry
 
-        # ✅ Check : ignorer lignes vides (coché par défaut)
+        # ✅ Check : ignorer lignes vides
         ignore_lignes_vides = tk.BooleanVar(value=True)
         frame_cb = tk.Frame(popup, bg="#f4f4f4")
         frame_cb.pack(padx=10, pady=5, anchor="w")
-        tk.Checkbutton(popup, text="Ignorer les lignes vides", variable=ignore_lignes_vides, bg="#f4f4f4").pack(side="left")
+
+        tk.Checkbutton(frame_cb, text="Ignorer les lignes vides", variable=ignore_lignes_vides, bg="#f4f4f4").pack(side="left")
+
         def reset_valeur():
             """Réinitialise les valeurs des champs à leurs valeurs par défaut."""
             for key, entry in entries.items():
-                valeur_defaut = valeurs_par_defaut.get(key, "")
                 if key == "data_fin":
                     try:
                         entry.delete(0, tk.END)
@@ -352,64 +366,63 @@ class opti_xls(ttkb.Frame):
                         entry.delete(0, tk.END)
                         entry.insert(0, "")
                 else:
+                    valeur_defaut = valeurs_par_defaut.get(key, "")
                     entry.delete(0, tk.END)
                     entry.insert(0, str(valeur_defaut))
 
             ignore_lignes_vides.set(True)
-            
+
         ttkb.Button(frame_cb, text="Réinitialisation", command=reset_valeur).pack(side="left", padx=10)
-
-
-            
 
         # ⚠️ Zone de message d'erreur
         label_erreur = tk.Label(popup, text="", fg="red", bg="#f4f4f4", font=("Segoe UI", 9, "italic"))
         label_erreur.pack(pady=5)
-    
+
         # ✅ Boutons
         frame_btns = tk.Frame(popup, bg="#f4f4f4")
         frame_btns.pack(pady=10)
-    
-        def appliquer():
+
+        def appliquer_parametres():
             try:
                 valeurs = {k: int(e.get()) for k, e in entries.items()}
             except ValueError:
                 messagebox.showerror("Erreur", "Tous les champs doivent être remplis avec des entiers valides.")
                 return
-        
-            # Calcul automatique de la taille d’en-tête
+
+            # Validation
             taille_entete = valeurs["entete_fin"] - valeurs["entete_debut"] + 1
             if taille_entete <= 0:
                 messagebox.showerror("Erreur", "L'entête doit contenir au moins une ligne.")
                 return
-        
-            # Vérification des contraintes
+
             if valeurs["entete_fin"] >= valeurs["data_debut"]:
                 messagebox.showerror("Erreur", "La fin de l'entête doit être avant le début des données.")
                 return
-        
+
             if valeurs["nb_colonnes_secondaires"] >= taille_entete:
                 messagebox.showerror("Erreur", "Le nombre de colonnes secondaires doit être inférieur à la taille de l'entête.")
                 return
-        
+
             if not (valeurs["entete_debut"] <= valeurs["ligne_unite"] <= valeurs["entete_fin"]):
                 messagebox.showerror("Erreur", "La ligne d'unité doit être comprise dans l'entête.")
                 return
-        
-            # Appliquer les valeurs
-            
-        
-            # Optionnel : garder les valeurs pour un usage futur
+
+            # Appliquer
             valeurs["ignorer_lignes_vides"] = ignore_lignes_vides.get()
             self.details_structure = valeurs
+            # print("valeur :")
+            # print(valeurs)
+            # print("details_structure :")
+            # print(self.details_structure)
 
-            self.taille_entete_entry.delete(0, tk.END)
-            self.taille_entete_entry.insert(0, str(taille_entete))
+            if hasattr(self, "taille_entete_entry"):
+                self.taille_entete_entry.delete(0, tk.END)
+                self.taille_entete_entry.insert(0, str(taille_entete))
+
             popup.destroy()
 
-        ttkb.Button(frame_btns, text="✅ Appliquer", command=appliquer).pack(side="left", padx=10)
+        ttkb.Button(frame_btns, text="✅ Appliquer", command=appliquer_parametres).pack(side="left", padx=10)
         ttkb.Button(frame_btns, text="❌ Annuler", command=popup.destroy).pack(side="left", padx=10)
-
 
 
 

@@ -221,6 +221,9 @@ def moyenne_par_jour(feuille,output_file ,date_col=0):
                     somme += val
                     count += 1
             moyenne = somme / count if count > 0 else None
+            
+            if moyenne is not None:
+                moyenne = round(moyenne, 2)
             moyennes.append(moyenne)
 
         # écrire le jour en 1re colonne
@@ -294,6 +297,8 @@ def moyenne_par_semaine(feuille, output_file,date_col=0):
                     somme += val
                     count += 1
             moyenne = somme / count if count > 0 else None
+            if moyenne is not None:
+                moyenne = round(moyenne, 2)
             moyennes.append(moyenne)
 
         # écrire la semaine en 1re colonne
