@@ -7,6 +7,10 @@
 
 - D'optimiser, formater restructurer les fichiers
 
+## condition
+
+Python
+
 
 ## Clonez le dépôt :
    ```bash

@@ -61,13 +61,13 @@ def plot_qqplot(indice_col: int, feuille):
         df = feuille.get_feuille()
         if not isinstance(df, pd.DataFrame):
             raise TypeError("La feuille n'est pas un DataFrame.")
-        print(df)
+        # print(df)
         start_row = feuille.debut_data
         end_row = feuille.fin_data
         
-        print(f"{end_row} > {len(df)}")
-        print(f"{start_row} < 0")
-        print(f"{start_row} >= {end_row}")
+        # print(f"{end_row} > {len(df)}")
+        # print(f"{start_row} < 0")
+        # print(f"{start_row} >= {end_row}")
 
         if not (0 <= indice_col < df.shape[1]):
             raise IndexError(f"Indice de colonne {indice_col} hors limites (max {df.shape[1]-1})")

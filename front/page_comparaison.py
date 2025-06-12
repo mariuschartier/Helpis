@@ -157,6 +157,7 @@ class ComparePage(ttkb.Frame):
             self.details_structure["entete_fin"])
 
         self.dico_entete()
+        print(self.dico_entete())
 
     def on_feuille_change(self, event=None):
         self.feuille_nom.set(self.feuille_combo.get())
@@ -164,7 +165,8 @@ class ComparePage(ttkb.Frame):
 
         # print(f"Feuille changée : {self.feuille_nom.get()}")
         # print(f"DataFrame shape : {self.df.shape}")
-
+        self.taille_entete_entry.delete(0, tk.END)
+        self.taille_entete_entry.insert(0, str(1))
         self.details_structure = {
             "entete_debut": 0,
             "entete_fin": 0,
@@ -1030,7 +1032,8 @@ class ComparePage(ttkb.Frame):
             messagebox.showwarning("Aucune sélection", "Veuillez sélectionner une colonne.")
             return
         
-        if not self.var_selection.chemin in self.dico_structure.keys():
+        if not self.var_selection.chemin in self.comparateur.feuille.entete.placement_colonne:
+            # print(self.comparateur.feuille.entete.placement_colonne)
             messagebox.showwarning("La colonne n'appartient pas à la feuille", "Veuillez sélectionner une colonne de cette feuille.")
             return
 

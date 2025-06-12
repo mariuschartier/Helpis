@@ -64,7 +64,7 @@ def get_excel_value(file_path, sheet_name):
         # Fermer le classeur sans enregistrer
         workbook.Close(SaveChanges=False)
         excel.Quit()
-
+        #print(data)
         return data
 
     except Exception as e:
