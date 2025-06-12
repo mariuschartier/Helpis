@@ -157,7 +157,7 @@ class ComparePage(ttkb.Frame):
             self.details_structure["entete_fin"])
 
         self.dico_entete()
-        print(self.dico_entete())
+        # print(self.dico_entete())
 
     def on_feuille_change(self, event=None):
         self.feuille_nom.set(self.feuille_combo.get())
@@ -1047,12 +1047,18 @@ class ComparePage(ttkb.Frame):
                 stat = f"{resultats['stat']:.4f}"
                 pval = f"{resultats['p_value']:.4f}" if resultats["p_value"] is not None else "—"
                 self.append_text( f"{self.var_selection.chemin} : stat={stat}, p={pval} → {normalite}\n")
+            # print(self.var_selection.chemin)
+            # print(self.comparateur.feuille.entete.placement_colonne[self.var_selection.chemin])
+            # print(self.comparateur.feuille.nom)
+
+
+            # print(self.comparateur.feuille.df.iloc[:,self.comparateur.feuille.entete.placement_colonne[self.var_selection.chemin]]  )
 
         elif theme == "Homogénéité des variances":
             var = self.var_selection.chemin
             groupe = self.groupe_selection.chemin
-            print(f"var:{var}")
-            print(f"groupe:{groupe}")
+            # print(f"var:{var}")
+            # print(f"groupe:{groupe}")
 
 
 

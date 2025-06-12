@@ -197,6 +197,9 @@ class Feuille:
             self.fichier = fichier
         if  isinstance(nom, str) :
             self.nom = nom
+            self.df = self.fichier.get_feuille(self.nom)
+            
+
         if isinstance(debut_data, int):
             self.debut_data = debut_data
         if  isinstance(fin_data, int):

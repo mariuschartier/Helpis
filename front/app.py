@@ -115,7 +115,6 @@ class ExcelTesterApp(ttkb.Frame):
         self._bind_mousewheel_to_widget(self.erreur_table)
         
 
-
 # Gestion du scroll =========================================================================================================
     
     def register_scrollable_widgets(self):
@@ -154,8 +153,6 @@ class ExcelTesterApp(ttkb.Frame):
             self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
 
-
-
 # Frame =========================================================================================================
     
     def create_file_frame(self):
@@ -175,7 +172,7 @@ class ExcelTesterApp(ttkb.Frame):
         self.widgets_file_frame.append(parcourir_btn)
 
         self.feuille_combo = ttkb.Combobox(self.file_frame, textvariable=self.feuille_nom, state="readonly", width=20)
-        self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.afficher_excel())
+        self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.on_feuille_change())
         self.widgets_file_frame.append(self.feuille_combo)
 
         # Création d'un sous-frame pour aligner label_entete et taille_entete_entry
@@ -245,6 +242,26 @@ class ExcelTesterApp(ttkb.Frame):
 
         self.dico_entete()
  
+    
+    def on_feuille_change(self, event=None):
+        self.feuille_nom.set(self.feuille_combo.get())
+        self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None)
+
+        # print(f"Feuille changée : {self.feuille_nom.get()}")
+        # print(f"DataFrame shape : {self.df.shape}")
+        self.taille_entete_entry.delete(0, tk.END)
+        self.taille_entete_entry.insert(0, str(1))
+        self.details_structure = {
+            "entete_debut": 0,
+            "entete_fin": 0,
+            "data_debut": 1,
+            "data_fin": self.df.shape[0] if self.df is not None else None,
+            "nb_colonnes_secondaires": 0,
+            "ligne_unite": 0,
+            "ignorer_vide": True
+        }
+        self.afficher_excel()        
+    
     def ouvrir_aide(self):
         """Ouvre une fenêtre d'aide avec des instructions sur l'utilisation de l'application."""
         aide_popup = tk.Toplevel(self)
@@ -549,14 +566,15 @@ class ExcelTesterApp(ttkb.Frame):
             obj = test[0]
 
             if isinstance(obj, Test_gen):
-                _, type_test, val_min, val_max = test
+                _, type_test, val_min, val_max,ecart_moy = test
                 export.append({
                     "type": "gen",
                     "nom": obj.nom,
                     "critere": obj.critere,
                     "test_type": type_test,
                     "val_min": val_min,
-                    "val_max": val_max
+                    "val_max": val_max,
+                    "écart à la moyenne":ecart_moy
                 })
 
             elif isinstance(obj, Test_spe):
@@ -614,7 +632,9 @@ class ExcelTesterApp(ttkb.Frame):
                                 obj, 
                                 test_data["test_type"], 
                                 test_data.get("val_min"), 
-                                test_data.get("val_max")
+                                test_data.get("val_max"),
+                                test_data.get("ecart_moy")
+
                             ))
                         self.test_listbox.insert(tk.END, f"[GEN] {test_data['nom']} ({test_data['test_type']})")
 
@@ -672,6 +692,7 @@ class ExcelTesterApp(ttkb.Frame):
         col2 = rest[1] if len(rest) > 1 else None
         val1 = rest[2] if len(rest) > 2 else None
         val2 = rest[3] if len(rest) > 3 else None
+        ecart_moy = rest[4] if len(rest) > 4 else None
 
         # Titre et type
         tk.Label(popup, text=f"Nom : {test_obj.nom}", font=("Segoe UI", 10, "bold")).pack(pady=5)
@@ -687,6 +708,7 @@ class ExcelTesterApp(ttkb.Frame):
                     "val_entre": [("Colonne", col1), ("Valeur Min", val1),  ("Valeur Max", val2)],
                     "compare_fix": [("Colonne 1", col1), ("Colonne 2", col2), ("Différence max", val1)],
                     "compare_ratio": [("Colonne 1", col1), ("Colonne 2", col2), ("Ratio autorisé", val1)],
+                    "écart à la moyenne": [("Colonne", col1), ("écart à la moyenne", val1)],
                 }
                 return champs_spe.get("type_test", []) + champs_spe.get(test_type, [])
             elif isinstance(test_obj, Test_gen):
@@ -696,6 +718,8 @@ class ExcelTesterApp(ttkb.Frame):
                     "val_min": [("Critères", critere_str), ("Valeur Min", col1 if col1 is not None else "N/A")],
                     "val_max": [("Critères", critere_str), ("Valeur Max", col2 if col2 is not None else "N/A")],
                     "val_entre": [("Critères", critere_str), ("Valeur Min", val1 if val1 is not None else "N/A"), ("Valeur Max", val2 if val2 is not None else "N/A")],
+                    "écart à la moyenne": [("Critères", critere_str), ("écart à la moyenne", ecart_moy if ecart_moy is not None else "N/A")],
+
                 }
                 return champs_gen.get("type_test", []) + champs_gen.get(test_type, [])
             else:
@@ -707,7 +731,6 @@ class ExcelTesterApp(ttkb.Frame):
         for champ, valeur in champs:
             if valeur is not None:
                 tk.Label(popup, text=f"{champ} : {valeur}").pack(anchor="w", padx=20)
-
 
 
 # Affichage de l'aperçu du fichier Excel
@@ -766,6 +789,8 @@ class ExcelTesterApp(ttkb.Frame):
         try:
             # Vider les anciennes données
             self.table.delete(*self.table.get_children())
+            self.taille_entete_entry.delete(0, tk.END)
+            self.taille_entete_entry.insert(0, str(1))
 
             # Lire le fichier Excel
             self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None)
@@ -858,7 +883,6 @@ class ExcelTesterApp(ttkb.Frame):
                 self.table.item(item, tags=tags)
                 break
 
-
 # Champs de résultats
     def create_results_frame(self):
         """Crée le cadre pour afficher les résultats des tests."""
@@ -932,8 +956,6 @@ class ExcelTesterApp(ttkb.Frame):
         return self.error_details_frame
         # texte.config(state="disabled")
 
-
-
 # Fonctionnalités d'initialisation et de préparation des dossiers =========================================================================================================
     def prepare_dossiers(self):
         """Crée les dossiers nécessaires pour l'application."""
@@ -941,7 +963,6 @@ class ExcelTesterApp(ttkb.Frame):
         Path("sauvegardes/results").mkdir(exist_ok=True)
         Path("sauvegardes/data").mkdir(exist_ok=True)
             
-
 
 # Verification d'une entrée entière =========================================================================================================
     def validate_integer_input(self, P):
@@ -1033,7 +1054,7 @@ class ExcelTesterApp(ttkb.Frame):
 
         # Type de test
         tk.Label(popup, text="Type de test :").grid(row=2, column=0, sticky="w")
-        type_test = ttk.Combobox(popup, values=["val_min", "val_max", "val_entre"], state="readonly")
+        type_test = ttk.Combobox(popup, values=["val_min", "val_max", "val_entre", "écart à la moyenne"], state="readonly")
         type_test.grid(row=2, column=1)
         type_test.set("val_min")
 
@@ -1044,13 +1065,16 @@ class ExcelTesterApp(ttkb.Frame):
         label_val_max = tk.Label(popup, text="Valeur maximale :")
         val_max_entry = tk.Entry(popup)
 
+        label_ecart_moy = tk.Label(popup, text="Écart à la moyenne")
+        ecart_moy_entry = tk.Entry(popup)
+
         # Masquer tous les champs dynamiques au départ
-        for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry]:
+        for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_ecart_moy, ecart_moy_entry]:
             widget.grid_forget()
 
         def afficher_champs_selon_type(event=None):
             """Affiche uniquement les champs nécessaires en fonction du type de test."""
-            for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry]:
+            for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_ecart_moy, ecart_moy_entry]:
                 widget.grid_forget()
 
             t = type_test.get()
@@ -1061,13 +1085,16 @@ class ExcelTesterApp(ttkb.Frame):
                 val_min_entry.grid(row=ligne, column=1)
             elif t == "val_max":
                 label_val_max.grid(row=ligne, column=0, sticky="w")
-                val_max_entry.grid(row=ligne, column=1)
+                val_max_entry.grid(row=ligne, column=1) 
             elif t == "val_entre":
                 label_val_min.grid(row=ligne, column=0, sticky="w")
                 val_min_entry.grid(row=ligne, column=1)
                 ligne += 1
                 label_val_max.grid(row=ligne, column=0, sticky="w")
                 val_max_entry.grid(row=ligne, column=1)
+            elif t== "écart à la moyenne":
+                label_ecart_moy.grid(row=ligne, column=0, sticky="w")
+                ecart_moy_entry.grid(row=ligne, column=1)
 
         # Lier l'événement de changement de type de test
         type_test.bind("<<ComboboxSelected>>", afficher_champs_selon_type)
@@ -1082,6 +1109,8 @@ class ExcelTesterApp(ttkb.Frame):
             try:
                 val_min = float(val_min_entry.get()) if val_min_entry.winfo_ismapped() and val_min_entry.get() else None
                 val_max = float(val_max_entry.get()) if val_max_entry.winfo_ismapped() and val_max_entry.get() else None
+                ecart_moy = float(ecart_moy_entry.get()) if ecart_moy_entry.winfo_ismapped() and ecart_moy_entry.get() else None
+
             except ValueError:
                 messagebox.showerror("Erreur", "Veuillez entrer des valeurs numériques valides.")
                 return
@@ -1091,7 +1120,7 @@ class ExcelTesterApp(ttkb.Frame):
                 return
 
             test = Test_gen(nom=nom, critere=[valeur])
-            self.tests.append((test, type_selected, val_min, val_max))
+            self.tests.append((test, type_selected, val_min, val_max,ecart_moy))
             self.test_listbox.insert(tk.END, f"[GEN] {nom} ({type_selected})")
             popup.destroy()
 
@@ -1126,7 +1155,7 @@ class ExcelTesterApp(ttkb.Frame):
         ligne+=1# 1
         # Type de test
         tk.Label(popup, text="Type de test :").grid(row=ligne, column=0, sticky="w")
-        type_test = ttk.Combobox(popup, values=["val_min", "val_max", "val_entre", "compare_fix", "compare_ratio"], state="readonly")
+        type_test = ttk.Combobox(popup, values=["val_min", "val_max", "val_entre","écart à la moyenne", "compare_fix", "compare_ratio"], state="readonly")
         type_test.grid(row=ligne, column=1)
         type_test.set("val_min")
 
@@ -1163,12 +1192,15 @@ class ExcelTesterApp(ttkb.Frame):
         label_ratio = tk.Label(popup, text="Ratio attendu :")
         ratio_entry = tk.Entry(popup)
 
-        for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_diff, diff_entry, label_ratio, ratio_entry,label_col2 ]:
+        label_ecart_moy = tk.Label(popup, text="Écart à la moyenne")
+        ecart_moy_entry = tk.Entry(popup)
+
+        for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_diff, diff_entry, label_ratio, ratio_entry,label_col2 ,label_ecart_moy, ecart_moy_entry]:
             widget.grid_forget()
         # colonne_cible_2_combo.grid_remove()
 
         def afficher_champs_selon_type(event=None,ligne=ligne):
-            for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_diff, diff_entry, label_ratio, ratio_entry,label_col2]:
+            for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_diff, diff_entry, label_ratio, ratio_entry,label_col2,label_ecart_moy, ecart_moy_entry]:
                 widget.grid_forget()
             colonne_cible_2_combo.grid_remove()
 
@@ -1190,6 +1222,9 @@ class ExcelTesterApp(ttkb.Frame):
 
                 label_val_max.grid(row=ligne_i, column=0, sticky="w")
                 val_max_entry.grid(row=ligne_i, column=1)
+            elif t== "écart à la moyenne":
+                label_ecart_moy.grid(row=ligne, column=0, sticky="w")
+                ecart_moy_entry.grid(row=ligne, column=1)
 
             elif t =="compare_fix"or t == "compare_ratio":
                 label_col2.grid(row=ligne-int(self.taille_entete_entry.get()), column=0, sticky="w")
@@ -1230,10 +1265,16 @@ class ExcelTesterApp(ttkb.Frame):
             try:
                 if type_selected == "val_min" or type_selected == "val_entre":
                     val1 = float(val_min_entry.get()) if val_min_entry.get() else None
+                if type_selected == "val_max" :
+                    val1 = float(val_max_entry.get()) if val_max_entry.get() else None
                 elif type_selected =="compare_fix":
                     val1 = float(diff_entry.get()) if diff_entry.get() else None
                 elif type_selected == "compare_ratio":
                     val1 = float(ratio_entry.get()) if ratio_entry.get() else None
+                elif type_selected == "écart à la moyenne":
+                    ecart_moy = float(ecart_moy_entry.get()) if ecart_moy_entry.winfo_ismapped() and ecart_moy_entry.get() else None
+                    val1 = ecart_moy
+
                 val2 = float(val_max_entry.get()) if val_max_entry.get() else None
             except ValueError:
                 messagebox.showerror("Erreur", "Valeurs numériques invalides")
@@ -1296,7 +1337,7 @@ class ExcelTesterApp(ttkb.Frame):
         for test in self.tests:
             message = ""
             if isinstance(test[0], Test_gen):
-                obj, type_test, val_min, val_max = test
+                obj, type_test, val_min, val_max,ecart_moy  = test
                 self.append_text(f"--- {obj.nom} ({type_test}) ---")
                 try:
                     if type_test == "val_min":
@@ -1305,6 +1346,8 @@ class ExcelTesterApp(ttkb.Frame):
                         message = obj.val_max(feuille, val_max)
                     elif type_test == "val_entre":
                         message = obj.val_entre(feuille, val_min, val_max)
+                    elif type_test == "écart à la moyenne":
+                        message = obj.ecart_moy(feuille, ecart_moy)
                     
                     self.append_text(str(message))
 
@@ -1334,7 +1377,9 @@ class ExcelTesterApp(ttkb.Frame):
                         message = obj.compare_col_fix(val1, col1, col2)
                     elif type_test == "compare_ratio":
                         message = obj.compare_col_ratio(val1, col1, col2)
-            
+                    elif type_test == "écart à la moyenne":
+                        message = obj.ecart_moy( val1,col1)
+
                     self.append_text(str(message))
             
                 except Exception as e:

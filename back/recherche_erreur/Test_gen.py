@@ -48,12 +48,27 @@ class Test_gen:
             erreur_message=f"valeurs hors de [{val_min}, {val_max}]"
         )
 
+
+    def ecart_moy(self, feuille: Feuille, ecart_moy: float):
+        """
+        Vérifie que les valeurs sont  val_min <= x <= val_max"""
+        # Vérifie que les valeurs sont entre val_min et val_max
+        return self.valider_colonnes(
+            feuille,
+            condition=lambda x,moy: (abs(ecart_moy - x) <= ecart_moy ) ,
+            message=f"Écart à la moyenne inferieur ou egal à la ecart_moy : {ecart_moy}",
+            erreur_message=f"Écart à la moyenne superieur à la ecart_moy : {ecart_moy}",
+            type_test= "ecart_moy"
+        )
+
+
     def valider_colonnes(
         self,
         feuille: Feuille,
         condition: Callable[[pd.Series], pd.Series],
         message: str,                  # ce message sert à donner un contexte "valeurs entre", etc.
-        erreur_message: str):
+        erreur_message: str,
+        type_test = None ):
         """
         Valide les colonnes d'une feuille selon un critère donné."""
         erreurs = {}
@@ -62,6 +77,7 @@ class Test_gen:
         ligne_data = feuille.debut_data
         ligne_fin = feuille.fin_data
         colonne_symbole = []
+
         for cle in feuille.entete.placement_colonne:
             for  crit in self.critere:
                 if crit in cle:
@@ -78,6 +94,7 @@ class Test_gen:
     
         for col in df.columns:
             nom_col = str(df.loc[ligne_symbole, col])
+            
             if  col  in colonne_symbole:
 
                 msg_tmp = f"📊 Colonne '{col+1}' détectée comme {nom_col} ({self.critere}).\n"
@@ -85,7 +102,12 @@ class Test_gen:
                 # message_final += msg_tmp
                 
                 valeurs = pd.to_numeric(df[col].iloc[ligne_data:ligne_fin], errors='coerce')
-                masques_valides = condition(valeurs)
+                moyenne = pd.to_numeric(df[col].iloc[ligne_data:ligne_fin], errors='coerce').mean()
+                print(moyenne)
+                if type_test == "ecart_moy":
+                    masques_valides = condition(valeurs,moyenne)
+                else:
+                    masques_valides = condition(valeurs)
                 valeurs_invalides = valeurs[~masques_valides]
     
                 if not valeurs_invalides.empty:

@@ -75,7 +75,7 @@ class opti_xls(ttkb.Frame):
         self.widgets_file_frame.append(parcourir_btn)
 
         self.feuille_combo = ttk.Combobox(self.file_frame, textvariable=self.feuille_nom, state="readonly", width=20)
-        self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.afficher_excel())
+        self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.on_feuille_change())
         self.widgets_file_frame.append(self.feuille_combo)
 
         # Création d'un sous-frame pour aligner label_entete et taille_entete_entry
@@ -287,6 +287,27 @@ class opti_xls(ttkb.Frame):
             except Exception as e:
                 messagebox.showerror("Erreur", f"Impossible de mettre à jour les colonnes : {e}")        
 
+
+    def on_feuille_change(self, event=None):
+        self.feuille_nom.set(self.feuille_combo.get())
+        self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None)
+
+        # print(f"Feuille changée : {self.feuille_nom.get()}")
+        # print(f"DataFrame shape : {self.df.shape}")
+        self.taille_entete_entry.delete(0, tk.END)
+        self.taille_entete_entry.insert(0, str(1))
+        self.details_structure = {
+            "entete_debut": 0,
+            "entete_fin": 0,
+            "data_debut": 1,
+            "data_fin": self.df.shape[0] if self.df is not None else None,
+            "nb_colonnes_secondaires": 0,
+            "ligne_unite": 0,
+            "ignorer_vide": True
+        }
+
+        
+        
 
     # Ouvrir le popup de manipulation de l'entete detaillée
     def ouvrir_popup_manipulation(self):

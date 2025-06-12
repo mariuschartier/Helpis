@@ -1,6 +1,7 @@
 import ttkbootstrap as ttkb
 from ttkbootstrap.constants import *
 import threading
+from tkinter import filedialog, messagebox, ttk
 
 from front.frame_opti_xls import opti_xls
 from front.page_comparaison import ComparePage
@@ -88,6 +89,7 @@ class MultiPageApp(ttkb.Window):
                 func()
             except Exception as e:
                 print("Erreur pendant l'exécution :", e)
+                messagebox.showerror("Erreur", f"Erreur lors de la creation : {e}")
             finally:
                 self.after(0, self.hide_loading)
         threading.Thread(target=task, daemon=True).start()

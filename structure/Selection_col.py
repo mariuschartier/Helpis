@@ -84,7 +84,7 @@ class Selection_col:
             selection = [combo.get() for combo, _ in self.comboboxes if combo.get()]
             self.chemin = " > ".join([col1] + selection) if col1 else None
             
-            print(self.structure_entete)
+            # print(self.structure_entete)
             if self.action_selection:
                 self.action_selection()
 
