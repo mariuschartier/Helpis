@@ -53,6 +53,8 @@ def import_bibli():
     install_and_import('jsonpickle')
     install_and_import('xlsxwriter')             
     install_and_import('ttkbootstrap') 
+    install_and_import('itertools') 
+
 
 import_bibli()            
 

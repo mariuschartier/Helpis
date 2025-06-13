@@ -51,15 +51,29 @@ class Test_gen:
 
     def ecart_moy(self, feuille: Feuille, ecart_moy: float):
         """
-        Vérifie que les valeurs sont  val_min <= x <= val_max"""
+        Vérifie que les valeurs sont  à distance x de la moyenne"""
         # Vérifie que les valeurs sont entre val_min et val_max
         return self.valider_colonnes(
             feuille,
-            condition=lambda x,moy: (abs(ecart_moy - x) <= ecart_moy ) ,
+            condition=lambda x,moy: (abs(moy - x) <= ecart_moy ) ,
             message=f"Écart à la moyenne inferieur ou egal à la ecart_moy : {ecart_moy}",
             erreur_message=f"Écart à la moyenne superieur à la ecart_moy : {ecart_moy}",
             type_test= "ecart_moy"
         )
+
+    def ecart_moy_ratio(self, feuille: Feuille, ecart_moy: float):
+        """
+        Vérifie que les valeurs sont  à distance x% de la moyenne"""
+        # Vérifie que les valeurs sont entre val_min et val_max
+        return self.valider_colonnes(
+            feuille,
+            condition=lambda x,moy: (abs(moy - x) <= abs(moy/ecart_moy*100) ) if moy !=0 else 0 ,
+            message=f"Écart à la moyenne inferieur ou egal à la ecart_moy : {ecart_moy}%",
+            erreur_message=f"Écart à la moyenne superieur à la ecart_moy : {ecart_moy}%",
+            type_test= "ecart_moy"
+        )
+
+
 
 
     def valider_colonnes(

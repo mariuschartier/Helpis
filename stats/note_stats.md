@@ -35,6 +35,7 @@ JOUR3  / 2023-06-22 / SALLE : 1, 2, 3, 4 / 0 suppression
 Poids : stat=0.9938, p=0.5746 → ✅ Normale
 ```
 
+
 JOUR4  / 2023-07-20 / SALLE : 1, 2, 3, 4 / 1 suppression
 ``` 
 Poids : stat=0.9890, p=0.1313 → ✅ Normale
