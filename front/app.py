@@ -1418,10 +1418,15 @@ class ExcelTesterApp(ttkb.Frame):
 
             self.append_text(f"--- FIN TESTS ---\n")
         feuille.error_all_cell_colors()
-        for row_idx, ligne in  enumerate(itertools.islice(feuille.erreurs, 50)):
+        i=0
+        # for row_idx, ligne in  enumerate(itertools.islice(feuille.erreurs, 50)):
+        for row_idx, ligne in  enumerate(feuille.erreurs):
             for col_idx, code in enumerate(ligne):
                 if code > 0:
-                    self.erreur_table.insert("", "end", values=(row_idx + 1, col_idx + 1, feuille.df.iloc[row_idx, col_idx]))
+                    i+=1
+                    self.erreur_table.insert("", "end", values=(row_idx +1, col_idx+1 , feuille.df.iloc[row_idx, col_idx]))
+                    if i >=100:
+                        break
 
 
 
