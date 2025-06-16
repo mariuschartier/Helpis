@@ -152,16 +152,21 @@ class ComparePage(ttkb.Frame):
         self.details_structure["data_debut"] = self.details_structure["entete_fin"]+1
 
         self.enlever_toutes_couleurs()
+        # self.colorier_ligne(self.details_structure["ligne_unite"],"#3CFF00")
+
         self.colorier_lignes_range(
             self.details_structure["entete_debut"],
             self.details_structure["entete_fin"])
+        print(self.details_structure["ligne_unite"])
+        # self.colorier_ligne(self.details_structure["ligne_unite"],"#3CFF00")
 
         self.dico_entete()
         # print(self.dico_entete())
 
     def on_feuille_change(self, event=None):
+        self.hide_conditional_fields()
         self.feuille_nom.set(self.feuille_combo.get())
-        self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None)
+        self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None).copy()
 
         # print(f"Feuille changée : {self.feuille_nom.get()}")
         # print(f"DataFrame shape : {self.df.shape}")
@@ -198,8 +203,8 @@ class ComparePage(ttkb.Frame):
         self.fichier_entry.insert(0, path)
 
         try:
-            xls = pd.ExcelFile(path)
-            self.feuille_combo["values"] = xls.sheet_names
+            with pd.ExcelFile(path) as xls:
+                self.feuille_combo['values'] = xls.sheet_names    
             self.feuille_combo.set(xls.sheet_names[0])
             self.ajouter_feuille()
             self.afficher_excel()
@@ -426,7 +431,8 @@ class ComparePage(ttkb.Frame):
             self.table.delete(*self.table.get_children())
 
             # Lire le fichier Excel
-            self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None)
+            self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None).copy()
+
             nb_cols = len(self.df.columns)
             col_names = [f"Col {i+1}" for i in range(nb_cols)]
 
@@ -440,7 +446,7 @@ class ComparePage(ttkb.Frame):
             # Remplir le tableau
             for i, row in self.df.head(50).iterrows():
                 self.table.insert("", "end", text=str(i), values=list(row))
-            self.colorier_ligne(self.details_structure["entete_debut"])
+            # self.colorier_ligne(self.details_structure["entete_debut"])
         except Exception as e:
             messagebox.showerror("Erreur", f"Impossible de lire le fichier : {e}")
         self.dico_entete()
@@ -514,6 +520,7 @@ class ComparePage(ttkb.Frame):
         """
         Colorie toutes les lignes de ligne_debut à ligne_fin en utilisant la fonction colorier_ligne.
         """
+        # self.enlever_toutes_couleurs()
         # S'assurer que ligne_debut est inférieur ou égal à ligne_fin
         if ligne_debut > ligne_fin:
             ligne_debut, ligne_fin = ligne_fin, ligne_debut
@@ -708,6 +715,8 @@ class ComparePage(ttkb.Frame):
         }
         if selected_method  in dico_methode_contrainte:
             self.append_text(f"Contraintes : {dico_methode_contrainte[selected_method]}", color="red")
+        # self.update_test_options()
+
 
     def show_conditional_fields(self, show_groupes=False):
         """ Affiche les champs conditionnels en fonction du thème sélectionné."""
@@ -735,17 +744,20 @@ class ComparePage(ttkb.Frame):
             self.col_groupe1_label, self.groupe1_selection,
             self.col_groupe2_label, self.groupe2_selection
         ]:
-            # self.col_var_label, self.var_selection,
             widget.grid_remove()
-
+    
+    
     def maj_selection_colonne(self):
         """ Met à jour les sélections de colonnes en fonction de la structure actuelle."""
+        # self.update_test_options()
         self.dico_colonne_groupe()
         self.var_selection.maj_donnees(self.dico_structure)
         self.groupe_selection.maj_donnees(self.dico_structure)
         self.groupe1_selection.maj_donnees(self.dico_groupe)
         self.groupe2_selection.maj_donnees(self.dico_groupe)
         self.on_colonne_change()      
+        
+
 
     def on_colonne_change(self):
         theme = self.theme_var.get()

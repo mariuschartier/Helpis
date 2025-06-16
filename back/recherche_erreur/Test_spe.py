@@ -126,7 +126,7 @@ class Test_spe:
             valeurs = pd.Series([valeurs])
 
         moyenne = pd.to_numeric(df.loc[ligne_data:ligne_fin,indices_colonnes], errors='coerce').mean()
-        print(df)
+        # print(df)
         print(moyenne)
         if type_test == "ecart_moy":
             masques_valides = condition(valeurs,moyenne)

@@ -237,18 +237,24 @@ class ExcelTesterApp(ttkb.Frame):
         self.details_structure["data_debut"] = self.details_structure["entete_fin"]+1
 
         self.enlever_toutes_couleurs()
+        # self.colorier_ligne(self.details_structure["ligne_unite"],"#3CFF00")
+
         self.colorier_lignes_range(
             self.details_structure["entete_debut"],
             self.details_structure["entete_fin"])
+        print(self.details_structure["ligne_unite"])
+        # self.colorier_ligne(self.details_structure["ligne_unite"],"#3CFF00")
+
 
         self.dico_entete()
- 
+
     
     def on_feuille_change(self, event=None):
         self.feuille_nom.set(self.feuille_combo.get())
-        self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None)
+        self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None).copy()
 
-        # print(f"Feuille changée : {self.feuille_nom.get()}")
+
+        # print(f"Feuille changée : {self.feuille_nom.get()}")      
         # print(f"DataFrame shape : {self.df.shape}")
         self.taille_entete_entry.delete(0, tk.END)
         self.taille_entete_entry.insert(0, str(1))
@@ -300,8 +306,8 @@ class ExcelTesterApp(ttkb.Frame):
             self.fichier_entry.delete(0, tk.END)
             self.fichier_entry.insert(0, filepath)
             try:
-                xls = pd.ExcelFile(filepath)
-                self.feuille_combo['values'] = xls.sheet_names
+                with pd.ExcelFile(filepath) as xls:
+                    self.feuille_combo['values'] = xls.sheet_names                
                 self.feuille_combo.set(xls.sheet_names[0])
                 self.afficher_excel()
                 self.lien_fichier()
@@ -798,7 +804,8 @@ class ExcelTesterApp(ttkb.Frame):
             self.taille_entete_entry.insert(0, str(1))
 
             # Lire le fichier Excel
-            self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None)
+            self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None).copy()
+
             nb_cols = len(self.df.columns)
             col_names = [f"Col {i+1}" for i in range(nb_cols)]
 
@@ -858,7 +865,6 @@ class ExcelTesterApp(ttkb.Frame):
         # S'assurer que ligne_debut est inférieur ou égal à ligne_fin
         if ligne_debut > ligne_fin:
             ligne_debut, ligne_fin = ligne_fin, ligne_debut
-
         for ligne_numero in range(ligne_debut, ligne_fin + 1):
             self.colorier_ligne(ligne_numero, couleur)
 

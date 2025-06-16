@@ -255,15 +255,15 @@ class ComparateurFichiers:
             serie = pd.to_numeric(self.collecter_donnees(colonne), errors='coerce').dropna()
             resultats = {"error": None}
             if methode == "Moyenne":
-                resultats["Moyenne"] = serie.mean()
+                resultats["Moyenne"] = round(serie.mean(),2)
 
             elif methode == "Mediane":
-                resultats["Mediane"] = serie.median()
+                resultats["Mediane"] = round(serie.median(),2)
             
             elif methode == "Variance":
-                resultats["Variance"] = serie.var()
+                resultats["Variance"] = round(serie.var(),2)
             elif methode == "Ecart-type":
-                resultats["Ecart-type"] = serie.std()
+                resultats["Ecart-type"] = round(serie.std(),2)
 
             else:
                 raise ValueError("Méthode inconnue : choisir 'Moyenne' ou 'Mediane'")

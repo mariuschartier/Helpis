@@ -7,7 +7,7 @@ from pathlib import Path
 from back.manipulation import opti_xlsx 
 from back.manipulation import opti_separation
 import pandas as pd
-
+from fonctions import is_file_locked
 from structure.Fichier import Fichier
 from structure.Feuille import Feuille
 from structure.Selection_col import Selection_col
@@ -141,6 +141,8 @@ class opti_xls(ttkb.Frame):
 
             if filepath:
                 self.activation_bouton(filepath)
+                
+            
         except Exception as e:
             print(f"erreur lors de la lecture du fichier: {e}")
 
@@ -188,32 +190,31 @@ class opti_xls(ttkb.Frame):
         if not is_xls:
             try:
                 # Sélectionner le moteur approprié
-                engine = 'openpyxl' if is_xlsx else None# 'xlrd'
+                engine = 'openpyxl' if is_xlsx else None
+
                 try:
-                    xls = pd.ExcelFile(filepath, engine=engine)
+                    with pd.ExcelFile(filepath, engine=engine) as xls:
+                        feuilles = xls.sheet_names
                 except ValueError as e:
-                    # Si xlrd échoue pour un .xls spécial, essayer avec openpyxl
                     if not is_xlsx:
                         engine = 'openpyxl'
                         try:
-                            xls = pd.ExcelFile(filepath, engine=engine)
+                            with pd.ExcelFile(filepath, engine=engine) as xls:
+                                feuilles = xls.sheet_names
                         except Exception as e_openpyxl:
                             raise Exception(f"Erreur avec openpyxl : {e_openpyxl}")
                     else:
                         raise Exception(f"Erreur avec xlrd : {e}")
 
-                feuilles = xls.sheet_names
                 self.feuille_combo['values'] = feuilles
-
                 if feuilles:
-                    self.feuille_combo['values'] = feuilles
-                    self.feuille_nom.set(feuilles[0])  # Met à jour la variable et le combobox
+                    self.feuille_nom.set(feuilles[0])
 
-                # Informer de l'extension utilisée
                 print("Le fichier est au format .xlsx" if is_xlsx else "Le fichier est au format .xls")
 
             except Exception as e:
                 messagebox.showerror("Erreur", f"Impossible de lire les feuilles du fichier :\n{e}")
+
 
     def desactivation_bouton(self):
         #entete
@@ -274,17 +275,13 @@ class opti_xls(ttkb.Frame):
         self.details_structure["ligne_unite"] = self.details_structure["entete_fin"]
         self.details_structure["data_debut"] = self.details_structure["entete_fin"]+1
 
-        self.enlever_toutes_couleurs()
-        self.colorier_lignes_range(
-            self.details_structure["entete_debut"],
-            self.details_structure["entete_fin"])
 
         self.dico_entete()     
 
 
     def on_feuille_change(self, event=None):
         self.feuille_nom.set(self.feuille_combo.get())
-        self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None)
+        self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None).copy()
 
         # print(f"Feuille changée : {self.feuille_nom.get()}")
         # print(f"DataFrame shape : {self.df.shape}")
@@ -300,7 +297,7 @@ class opti_xls(ttkb.Frame):
         }
         self.taille_entete_entry.delete(0, tk.END)
         self.taille_entete_entry.insert(0, str(1))
-        
+        print(is_file_locked(self.fichier_path))
         
 
     # Ouvrir le popup de manipulation de l'entete detaillée
