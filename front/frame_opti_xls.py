@@ -262,9 +262,9 @@ class opti_xls(ttkb.Frame):
 
     def on_taille_entete_change(self, *args):
         """
-        Met à jour la fin de l'en-tête et reconstruit les colonnes disponibles
-        et le dictionnaire d'en-tête en fonction de la nouvelle taille.
+        Met à jour la fin de l'en-tête 
         """
+
         # Mettre à jour la fin de l'en-tête
         self.details_structure["entete_fin"] = (
             int(self.taille_entete_entry.get()) + self.details_structure["entete_debut"] - 1
@@ -274,18 +274,12 @@ class opti_xls(ttkb.Frame):
         self.details_structure["ligne_unite"] = self.details_structure["entete_fin"]
         self.details_structure["data_debut"] = self.details_structure["entete_fin"]+1
 
-        # Vérifier si un fichier est chargé
-        if self.df is not None:
-            try:
-                # Reconstruire les colonnes disponibles
-                ligne_entete_debut = self.details_structure.get("entete_debut", 0)
-                self.colonnes_disponibles = list(
-                    self.df.iloc[ligne_entete_debut].dropna().astype(str)
-                )
-                # Reconstruire le dictionnaire d'en-tête
-                self.dico_entete()
-            except Exception as e:
-                messagebox.showerror("Erreur", f"Impossible de mettre à jour les colonnes : {e}")        
+        self.enlever_toutes_couleurs()
+        self.colorier_lignes_range(
+            self.details_structure["entete_debut"],
+            self.details_structure["entete_fin"])
+
+        self.dico_entete()     
 
 
     def on_feuille_change(self, event=None):
@@ -294,8 +288,7 @@ class opti_xls(ttkb.Frame):
 
         # print(f"Feuille changée : {self.feuille_nom.get()}")
         # print(f"DataFrame shape : {self.df.shape}")
-        self.taille_entete_entry.delete(0, tk.END)
-        self.taille_entete_entry.insert(0, str(1))
+        
         self.details_structure = {
             "entete_debut": 0,
             "entete_fin": 0,
@@ -305,7 +298,8 @@ class opti_xls(ttkb.Frame):
             "ligne_unite": 0,
             "ignorer_vide": True
         }
-
+        self.taille_entete_entry.delete(0, tk.END)
+        self.taille_entete_entry.insert(0, str(1))
         
         
 
