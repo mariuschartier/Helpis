@@ -1,201 +1,52 @@
+import tkinter as tk
+from tkinter import ttk
+from tkinter import messagebox
 
-79
-77
-73
-84
-68
-82
-70
-71
-66
-74
-76
-84
-68
-71
-71
-79
-71
-73
-79
-71
-81
-82
-76
-86
-81
-79
-63
-71
-68
-74
-72
-79
-70
-71
-84
-78
-75
-78
-76
-71
-60
-68
-68
-76
-79
-76
-71
-65
-75
-75
-74
-77
-74
-74
-75
-77
-77
-73
-78
-75
-80
-79
-75
-71
-77
-72
-76
-75
-81
-84
-68
-61
-71
-75
-72
-79
-68
-77
-85
-64
-80
-80
-74
-73
-74
-67
-76
-77
-72
-74
-72
-65
-84
-79
-77
-68
-77
-76
-75
-82
-74
-67
-67
-76
-81
-73
-78
-57
-73
-77
-62
-67
-68
-68
-72
-68
-64
-71
-64
-78
-78
-77
-81
-76
-71
-75
-77
-71
-74
-71
-77
-74
-69
-66
-69
-75
-75
-45
-78
-67
-76
-73
-68
-75
-69
-71
-69
-70
-70
-62
-77
-67
-82
-73
-73
-70
-61
-54
-71
-67
-76
-68
-68
-63
-74
-67
-86
-87
-72
-64
-68
-74
-71
-69
-76
-74
-80
-85
-68
-75
-77
-70
-71
-70
-78
-63
-73
-78
-75
-68
-62
-72
-74
-71
-71
-66
-68
-59
-69
-70
+def action_cellule(event):
+    # Identifier la région cliquée
+    region = tree.identify('region', event.x, event.y)
+    if region == 'cell':
+        # Identifier la ligne et la colonne
+        row_id = tree.identify_row(event.y)
+        col_id = tree.identify_column(event.x)
+        # Vérifier si c'est la colonne 'Action'
+        if col_id == '#2':  # La deuxième colonne
+            item = tree.item(row_id)
+            values = item['values']
+            # Appeler la fonction spécifique
+            messagebox.showinfo("Action", f"Action sur {values[0]}")
+        # Ajoutez d'autres conditions si nécessaire
+
+def on_heading_click(event):
+    region = tree.identify('region', event.x, event.y)
+    if region == 'heading':
+        col = tree.identify_column(event.x)
+        if col == '#2':  # La colonne "Action"
+            messagebox.showinfo("En-tête", "Vous avez cliqué sur l'en-tête de 'Action'!")
+
+root = tk.Tk()
+root.title("Exemple avec clics sur cellules et en-tête")
+
+# Création du Treeview
+tree = ttk.Treeview(root, columns=("Nom", "Action"), show='headings')
+
+# Définir les en-têtes
+tree.heading("Nom", text="Nom")
+tree.heading("Action", text="Action")
+
+# Définir la largeur des colonnes
+tree.column("Nom", width=150)
+tree.column("Action", width=150)
+
+# Ajouter des données
+for i in range(10):
+    tree.insert("", "end", values=(f"Item {i+1}", "Cliquez ici"))
+
+tree.pack(fill='both', expand=True)
+
+# Lier le clic pour la cellule
+tree.bind("<Button-1>", action_cellule)
+# Lier le clic pour l'en-tête
+tree.bind("<Button-1>", on_heading_click, add='+')
+
+root.mainloop()

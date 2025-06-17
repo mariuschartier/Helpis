@@ -242,7 +242,7 @@ class ExcelTesterApp(ttkb.Frame):
         self.colorier_lignes_range(
             self.details_structure["entete_debut"],
             self.details_structure["entete_fin"])
-        print(self.details_structure["ligne_unite"])
+        # print(self.details_structure["ligne_unite"])
         # self.colorier_ligne(self.details_structure["ligne_unite"],"#3CFF00")
 
 
@@ -267,7 +267,9 @@ class ExcelTesterApp(ttkb.Frame):
             "ligne_unite": 0,
             "ignorer_vide": True
         }
-        self.afficher_excel()        
+        self.afficher_excel()       
+        self.erreur_table.delete(*self.erreur_table.get_children())
+ 
     
     def ouvrir_aide(self):
         """Ouvre une fenêtre d'aide avec des instructions sur l'utilisation de l'application."""
@@ -795,15 +797,11 @@ class ExcelTesterApp(ttkb.Frame):
         if self.table.winfo_width() > max_width:
             self.table.config(width=max_width)
 
-    def afficher_excel(self):
-        """Affiche le contenu du fichier Excel dans le tableau."""
+    def update_excel(self):
         try:
-            # Vider les anciennes données
             self.table.delete(*self.table.get_children())
-            self.taille_entete_entry.delete(0, tk.END)
-            self.taille_entete_entry.insert(0, str(1))
 
-            # Lire le fichier Excel
+        # Lire le fichier Excel
             self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None).copy()
 
             nb_cols = len(self.df.columns)
@@ -819,7 +817,22 @@ class ExcelTesterApp(ttkb.Frame):
             # Remplir le tableau
             for i, row in self.df.head(50).iterrows():
                 self.table.insert("", "end", text=str(i), values=list(row))
-            self.colorier_ligne(self.details_structure["entete_debut"])
+            self.colorier_lignes_range(
+                self.details_structure["entete_debut"],
+                self.details_structure["entete_fin"])
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Impossible de lire le fichier : {e}")
+        self.dico_entete()
+        
+        
+    def afficher_excel(self):
+        """Affiche le contenu du fichier Excel dans le tableau."""
+        try:
+            # Vider les anciennes données
+            self.taille_entete_entry.delete(0, tk.END)
+            self.taille_entete_entry.insert(0, str(1))
+
+            self.update_excel()
         except Exception as e:
             messagebox.showerror("Erreur", f"Impossible de lire le fichier : {e}")
         self.dico_entete()
@@ -947,10 +960,12 @@ class ExcelTesterApp(ttkb.Frame):
         tree_frame.pack(fill="both", expand=True)
 
         # La Treeview
-        self.erreur_table = ttk.Treeview(tree_frame, columns=("Ligne", "Colonne", "Valeur"), show="headings")
+        self.erreur_table = ttk.Treeview(tree_frame, columns=("Ligne", "Colonne", "Valeur","Bouton suppression"), show="headings")
         self.erreur_table.heading("Ligne", text="Ligne")
         self.erreur_table.heading("Colonne", text="Colonne")
         self.erreur_table.heading("Valeur", text="Valeur d'erreur")
+        self.erreur_table.heading("Bouton suppression", text="Tout supprimer")
+
         self.erreur_table.pack(side="left", fill="both", expand=True)
 
         # Barre de défilement verticale
@@ -964,8 +979,93 @@ class ExcelTesterApp(ttkb.Frame):
         # Lier les scrollbar à la Treeview
         self.erreur_table.configure(yscrollcommand=err_scroll_y.set, xscrollcommand=err_scroll_x.set)
 
+        # Lier le clic pour la cellule
+        self.erreur_table.bind("<Button-1>", self.action_cellule)
+        # Lier le clic pour l'en-tête
+        self.erreur_table.bind("<Button-1>", self.on_heading_click, add='+')
+
         return self.error_details_frame
         # texte.config(state="disabled")
+
+    def action_cellule(self, event):
+        # Identifier la région cliquée
+        region = self.erreur_table.identify('region', event.x, event.y)
+        if region == 'cell':
+            # Identifier la ligne et la colonne
+            row_id = self.erreur_table.identify_row(event.y)
+            col_id = self.erreur_table.identify_column(event.x)
+            # Vérifier si c'est la colonne 'Action'
+            if col_id == '#4':  
+                item = self.erreur_table.item(row_id)
+                values = item['values']
+                # Appeler la fonction spécifique
+                try:
+                    ligne_excel = int(values[0])  # Index 1-based déjà ?
+                    self.feuille.suppression_ligne_unique(ligne_excel)
+                    self.erreur_table.delete(row_id)  # Supprimer de l'affichage aussi
+                    messagebox.showinfo("Action", f"Ligne {ligne_excel} supprimée.")
+                    self.recharger_erreur_table()
+                except Exception as e:
+                    messagebox.showerror("Erreur", f"Impossible de supprimer la ligne : {e}")
+            # Ajoutez d'autres conditions si nécessaire
+
+    def on_heading_click(self, event):
+        region = self.erreur_table.identify('region', event.x, event.y)
+        if region == 'heading':
+            col = self.erreur_table.identify_column(event.x)
+            if col == '#4': 
+                lignes_diff_zero = [
+                    i + 1  # Excel est 1-based
+                    for i, ligne in enumerate(self.feuille.erreurs)
+                    if any(val != 0 for val in ligne)
+                ]
+
+                if not lignes_diff_zero:
+                    messagebox.showinfo("Info", "Aucune ligne à supprimer.")
+                    return
+
+                confirmation = messagebox.askyesno(
+                    "Suppression multiple",
+                    f"Supprimer {len(lignes_diff_zero)} lignes contenant des erreurs ?"
+                )
+
+                if confirmation:
+                    self.feuille.suppression_ligne_liste(lignes_diff_zero)
+                    self.recharger_erreur_table()  # fonction à ajouter
+                    messagebox.showinfo("Terminé", "Lignes supprimées.")
+
+    def recharger_erreur_table(self):
+        self.erreur_table.delete(*self.erreur_table.get_children())
+        self.afficher_erreurs()  # fonction qui parcourt `feuille.erreurs` et les réaffiche
+
+
+
+    def afficher_erreurs(self):
+        self.feuille.error_all_cell_colors()
+        self.df = self.feuille.df
+        self.update_excel()
+        i = 0
+        for row_idx, ligne in enumerate(self.feuille.erreurs):
+            for col_idx, code in enumerate(ligne):
+                try:
+                    if float(code) > 0:
+                        i += 1
+                        valeur = self.feuille.df.iloc[row_idx, col_idx]
+                        self.erreur_table.insert("", "end", values=(
+                            row_idx + 1,
+                            col_idx + 1,
+                            valeur,
+                            "Supprimer cette ligne"
+                        ))
+                        if i >= 10:
+                            break
+                except (ValueError, TypeError):
+                    continue  # Si `code` n'est pas un nombre, on ignore
+
+            if i >= 100:
+                break
+        
+
 
 # Fonctionnalités d'initialisation et de préparation des dossiers =========================================================================================================
     def prepare_dossiers(self):
@@ -1349,18 +1449,18 @@ class ExcelTesterApp(ttkb.Frame):
             return
 
         fichier = Fichier(self.fichier_path)
-        feuille = Feuille(fichier, self.feuille_nom.get(),
+        self.feuille = Feuille(fichier, self.feuille_nom.get(),
                           self.details_structure["data_debut"],
                           self.details_structure["data_fin"],)
-        entete = Entete(feuille,self.details_structure["entete_debut"],
+        entete = Entete(self.feuille,self.details_structure["entete_debut"],
                         self.details_structure["entete_fin"],
                         self.details_structure["nb_colonnes_secondaires"],
                         self.details_structure["ligne_unite"],
                         self.dico_structure
                         )
-        feuille.entete = entete
+        self.feuille.entete = entete
         # print(feuille.entete.structure)
-        feuille.clear_all_cell_colors()
+        self.feuille.clear_all_cell_colors()
 
 
         for item in self.erreur_table.get_children():
@@ -1373,15 +1473,15 @@ class ExcelTesterApp(ttkb.Frame):
                 self.append_text(f"--- {obj.nom} ({type_test}) ---")
                 try:
                     if type_test == "val_min":
-                        message = obj.val_min(feuille, val_min)
+                        message = obj.val_min(self.feuille, val_min)
                     elif type_test == "val_max":
-                        message = obj.val_max(feuille, val_max)
+                        message = obj.val_max(self.feuille, val_max)
                     elif type_test == "val_entre":
-                        message = obj.val_entre(feuille, val_min, val_max)
+                        message = obj.val_entre(self.feuille, val_min, val_max)
                     elif type_test == "ecart_moy":
-                        message = obj.ecart_moy(feuille, ecart_moy)
+                        message = obj.ecart_moy(self.feuille, ecart_moy)
                     elif type_test == "ecart_moy_ratio":
-                        message = obj.ecart_moy_ratio(feuille, ecart_moy)
+                        message = obj.ecart_moy_ratio(self.feuille, ecart_moy)
                     
                     self.append_text(str(message))
 
@@ -1394,7 +1494,7 @@ class ExcelTesterApp(ttkb.Frame):
             elif isinstance(test[0], Test_spe):
                 # ⬇️ décomposition étendue avec les nouvelles cases à cocher
                 obj, type_test, col1, col2, val1, val2 = test
-                obj.feuille = feuille  # mise à jour de la feuille
+                obj.feuille = self.feuille  # mise à jour de la feuille
             
                 self.append_text(f"--- {obj.nom} ({type_test}) ---")
                 
@@ -1423,16 +1523,8 @@ class ExcelTesterApp(ttkb.Frame):
 
 
             self.append_text(f"--- FIN TESTS ---\n")
-        feuille.error_all_cell_colors()
-        i=0
-        # for row_idx, ligne in  enumerate(itertools.islice(feuille.erreurs, 50)):
-        for row_idx, ligne in  enumerate(feuille.erreurs):
-            for col_idx, code in enumerate(ligne):
-                if code > 0:
-                    i+=1
-                    self.erreur_table.insert("", "end", values=(row_idx +1, col_idx+1 , feuille.df.iloc[row_idx, col_idx]))
-                    if i >=100:
-                        break
+        self.afficher_erreurs()
+                   
 
 
 

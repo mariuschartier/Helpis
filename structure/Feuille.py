@@ -83,6 +83,29 @@ class Feuille:
         wb.save(self.fichier.chemin)
         print(f"✅ Cellules colorées dans {self.fichier.chemin}")
 
+
+    def color_ligne(self, lignes: list[int], couleur="ffffff"):
+        """
+        Colorie des lignes entières dans un fichier Excel.
+
+        :param lignes: liste des indices de lignes à colorier (0-based, donc +1 pour Excel)
+        :param couleur: code couleur hex RGB (par défaut : blanc)
+        """
+        wb = load_workbook(self.fichier.chemin)
+        ws = wb[self.nom]
+
+        fill = PatternFill(start_color=couleur, end_color=couleur, fill_type="solid")
+
+        max_col = ws.max_column  # Nombre total de colonnes dans la feuille
+
+        for i in lignes:
+            excel_row = i + 1  # ligne Excel (1-based)
+            for col in range(1, max_col + 1):
+                ws.cell(row=excel_row, column=col).fill = fill
+
+        wb.save(self.fichier.chemin)
+        print(f"✅ Lignes {', '.join(str(i + 1) for i in lignes)} colorées dans {self.fichier.chemin}")
+
     def clear_all_cell_colors(self):
         """
         Supprime toutes les couleurs de fond des cellules dans une feuille spécifique
@@ -125,8 +148,11 @@ class Feuille:
         jaune="F7DD24"
         rouge_ = PatternFill(start_color=rouge, end_color=rouge, fill_type="solid")
         jaune_ = PatternFill(start_color=jaune, end_color=jaune, fill_type="solid")
-
-    
+        
+        max_row = feuille_cible.max_row
+        max_col = feuille_cible.max_column
+        print(f"ligne: {self.nb_ligne}  row : {max_row}")
+        print(f"nb_colonne: {self.nb_colonne}  max_col : {max_col}")
 
         for row in range( self.nb_ligne):
             for col in range( self.nb_colonne):
@@ -206,3 +232,62 @@ class Feuille:
             self.fin_data = fin_data        
         
         
+    def suppression_ligne_unique(self, nb_ligne: int):
+        print(f"🔍 Suppression de la ligne {nb_ligne} dans : {self.fichier.chemin}")
+
+        if nb_ligne <= 0:
+            print("⚠️ Numéro de ligne invalide. Il doit être supérieur à 0.")
+            return
+
+        try:
+            wb = load_workbook(self.fichier.chemin)
+            if self.nom not in wb.sheetnames:
+                print(f"❌ Feuille '{self.nom}' introuvable dans le fichier.")
+                return
+
+            ws = wb[self.nom]
+            max_ligne = ws.max_row
+
+            if nb_ligne > max_ligne:
+                print(f"⚠️ Ligne {nb_ligne} hors limites (max {max_ligne}).")
+                return
+
+            ws.delete_rows(nb_ligne)
+            if 0 <= nb_ligne - 1 < len(self.erreurs):  # Excel → Python (1-based → 0-based)
+                del self.erreurs[nb_ligne - 1]
+            wb.save(self.fichier.chemin)
+            print("✅ Ligne supprimée et fichier sauvegardé.")
+            self.df = self.fichier.get_feuille(self.nom)
+            self.nb_ligne,  self.nb_colonne = self.df.shape
+            self.clear_all_cell_colors()
+            self.error_all_cell_colors()
+        except PermissionError:
+            raise ValueError("⛔ Le fichier est ouvert dans Excel. Fermez-le avant de continuer.")
+        except Exception as e:
+            raise ValueError(f"❌ Erreur lors de la suppression : {e}")
+
+
+    def suppression_ligne_liste(self, nb_lignes: list[int]):
+        print(f"🔍 Fichier : {self.fichier.chemin}")
+        print(f"🗑️ Lignes à supprimer : {nb_lignes}")
+
+        try:
+            wb = load_workbook(self.fichier.chemin)
+            ws = wb[self.nom]
+
+            for ligne in sorted(nb_lignes, reverse=True):
+                if ligne > 0:
+                    ws.delete_rows(ligne)
+                    if 0 <= ligne - 1 < len(self.erreurs):
+                        del self.erreurs[ligne - 1]
+            wb.save(self.fichier.chemin)
+            print("💾 Modifications enregistrées avec succès.")
+
+            self.df = self.fichier.get_feuille(self.nom)
+            self.nb_ligne,  self.nb_colonne = self.df.shape
+            self.clear_all_cell_colors()
+            self.error_all_cell_colors()
+
+        
+        except Exception as e:
+            raise ValueError(f"❌ Erreur lors de la suppression des lignes : {e}")

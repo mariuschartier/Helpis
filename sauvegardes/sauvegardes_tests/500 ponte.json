@@ -1,0 +1,11 @@
+[
+  {
+    "type": "spe",
+    "nom": "500",
+    "test_type": "val_min",
+    "col1": "Production hebdo ou journalière > Jours de la semaine > Mar.",
+    "col2": "",
+    "val1": 500.0,
+    "val2": null
+  }
+]
