@@ -1,0 +1,11 @@
+[
+  {
+    "type": "spe",
+    "nom": "test 1 L",
+    "test_type": "val_max",
+    "col1": "Eau > Quantité > L",
+    "col2": "",
+    "val1": 150.0,
+    "val2": 150.0
+  }
+]

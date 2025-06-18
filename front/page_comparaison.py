@@ -427,10 +427,16 @@ class ComparePage(ttkb.Frame):
     def afficher_excel(self):
         """Affiche le contenu du fichier Excel dans le tableau."""
         try:
-            # Vider les anciennes données
+            self.update_excel()
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Impossible de lire le fichier : {e}")
+        self.dico_entete()
+
+    def update_excel(self):
+        try:
             self.table.delete(*self.table.get_children())
 
-            # Lire le fichier Excel
+        # Lire le fichier Excel
             self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None).copy()
 
             nb_cols = len(self.df.columns)
@@ -446,10 +452,14 @@ class ComparePage(ttkb.Frame):
             # Remplir le tableau
             for i, row in self.df.head(50).iterrows():
                 self.table.insert("", "end", text=str(i), values=list(row))
-            # self.colorier_ligne(self.details_structure["entete_debut"])
+            self.colorier_lignes_range(
+                self.details_structure["entete_debut"],
+                self.details_structure["entete_fin"])
         except Exception as e:
             messagebox.showerror("Erreur", f"Impossible de lire le fichier : {e}")
         self.dico_entete()
+
+
 
     def create_excel_preview_frame(self):
         """Crée le cadre pour l'aperçu du fichier Excel."""
@@ -745,7 +755,6 @@ class ComparePage(ttkb.Frame):
             self.col_groupe2_label, self.groupe2_selection
         ]:
             widget.grid_remove()
-    
     
     def maj_selection_colonne(self):
         """ Met à jour les sélections de colonnes en fonction de la structure actuelle."""

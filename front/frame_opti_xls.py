@@ -495,22 +495,22 @@ class opti_xls(ttkb.Frame):
 
 
 # Construction du dictionnaire d'en-tête =========================================================================================================
-    def dico_entete(self,feuille=None):
+    def dico_entete(self):
         """Construit un dictionnaire représentant la structure de l'en-tête du fichier Excel."""
-
         self.dico_structure = {}
         ligne_entete_debut = self.details_structure.get("entete_debut", 0)
         ligne_entete_fin = self.details_structure.get("entete_fin", 1)
 
         try:
-            for col_idx in range(len(feuille.df.columns)):
+            
+            for col_idx in range(len(self.df.columns)):
                 current_level = self.dico_structure
 
                 for row_idx in range(ligne_entete_debut, ligne_entete_fin + 1):
-                    cell_value = feuille.df.iloc[row_idx, col_idx]
+                    cell_value = self.df.iloc[row_idx, col_idx]
                     if pd.isna(cell_value):
                         continue
-                    cell_value = str(cell_value)
+                    cell_value = str(cell_value).strip()
 
                     if cell_value not in current_level:
                         current_level[cell_value] = {}
@@ -647,7 +647,7 @@ class opti_xls(ttkb.Frame):
                         self.details_structure["entete_fin"],
                         self.details_structure["nb_colonnes_secondaires"],
                         self.details_structure["ligne_unite"],
-                        self.dico_entete(feuille)
+                        self.dico_entete()
                         )
         feuille.entete = entete
         colonne =  self.afficher_colonne_popup(feuille)
@@ -800,7 +800,7 @@ class opti_xls(ttkb.Frame):
                             self.details_structure["entete_fin"],
                             self.details_structure["nb_colonnes_secondaires"],
                             self.details_structure["ligne_unite"],
-                            self.dico_entete(feuille)
+                            self.dico_entete()
                             )
             feuille.entete = entete
             opti_xlsx.entete_une_ligne(feuille,fichier_destination)
