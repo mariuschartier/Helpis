@@ -105,3 +105,4 @@ Statistiques desctiptives
 
 
 Tests Levene(homogeneité des variances) :p=0.4820 → ✅ Homogènes
+
