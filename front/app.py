@@ -558,7 +558,7 @@ class ExcelTesterApp(ttkb.Frame):
     
     def sauvegarder_tests(self):
         """Sauvegarde les tests dans un fichier JSON."""
-        Path("sauvegardes_tests").mkdir(exist_ok=True)
+        Path("sauvegardes/sauvegardes_tests").mkdir(exist_ok=True)
         
         chemin = filedialog.asksaveasfilename(
             defaultextension=".json",
@@ -1070,8 +1070,12 @@ class ExcelTesterApp(ttkb.Frame):
 
 # Fonctionnalités d'initialisation et de préparation des dossiers =========================================================================================================
     def prepare_dossiers(self):
-        print('test')
         # Récupère le répertoire de l'exécutable
+        Path("sauvegardes/sauvegardes_tests").mkdir(parents=True,exist_ok=True)
+        Path("sauvegardes/results").mkdir(parents=True,exist_ok=True)
+        Path("sauvegardes/data").mkdir(parents=True,exist_ok=True)
+
+
         if hasattr(sys, '_MEIPASS'):
             base_dir = Path(sys._MEIPASS)
         else:
@@ -1084,7 +1088,6 @@ class ExcelTesterApp(ttkb.Frame):
         (sauvegardes_dir / 'results').mkdir(parents=True, exist_ok=True)
         (sauvegardes_dir / 'data').mkdir(parents=True, exist_ok=True)
 
-        print('test2')
 
             
 

@@ -69,7 +69,7 @@ def opti_html_to_xlsx(file_path: str, name=""):
     soup = BeautifulSoup(html_content, 'html.parser')
     table = soup.find('table')
     nb_colonnes = nb_colonne(table)
-    print(nb_colonnes)
+    # print(nb_colonnes)
     # Données à écrire dans Excel avec fusion à appliquer
     structured_data = []
     merge_instructions = []
@@ -146,7 +146,7 @@ def opti_html_to_xlsx(file_path: str, name=""):
             
             c_idx += 1
 
-    print(c_idx)
+    # print(c_idx)
     wb.save(result_path)
 
 
@@ -155,7 +155,8 @@ def convertir(chemin_source: str, chemin_destination: str):
     Fonction publique pour lancer la conversion HTML → XLSX.
     """
     name = fichier_du_chemin(chemin_destination)
-    opti_html_to_xlsx(chemin_source, name)
+    print(chemin_destination)
+    opti_html_to_xlsx(chemin_source, chemin_destination)
 
     
 
