@@ -1,3 +1,5 @@
+
+
 import ttkbootstrap as ttkb
 from ttkbootstrap.constants import *
 import threading
@@ -10,6 +12,7 @@ from front.app import ExcelTesterApp
 class MultiPageApp(ttkb.Window):
     """Application multi-page pour la manipulation de fichiers Excel."""
     def __init__(self):
+
         super().__init__(themename="flatly")  # ou autre thème
         self.title("Application Multi-page - Excel Tool")
         self.state('zoomed')

@@ -1,52 +1,30 @@
+
+
 import tkinter as tk
-from tkinter import ttk
 from tkinter import messagebox
 
-def action_cellule(event):
-    # Identifier la région cliquée
-    region = tree.identify('region', event.x, event.y)
-    if region == 'cell':
-        # Identifier la ligne et la colonne
-        row_id = tree.identify_row(event.y)
-        col_id = tree.identify_column(event.x)
-        # Vérifier si c'est la colonne 'Action'
-        if col_id == '#2':  # La deuxième colonne
-            item = tree.item(row_id)
-            values = item['values']
-            # Appeler la fonction spécifique
-            messagebox.showinfo("Action", f"Action sur {values[0]}")
-        # Ajoutez d'autres conditions si nécessaire
+class MonApplication:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Ma première application Tkinter")
 
-def on_heading_click(event):
-    region = tree.identify('region', event.x, event.y)
-    if region == 'heading':
-        col = tree.identify_column(event.x)
-        if col == '#2':  # La colonne "Action"
-            messagebox.showinfo("En-tête", "Vous avez cliqué sur l'en-tête de 'Action'!")
+        # Créer un label
+        self.label = tk.Label(root, text="Entrez votre nom :")
+        self.label.pack(pady=10)
 
-root = tk.Tk()
-root.title("Exemple avec clics sur cellules et en-tête")
+        # Champ de texte
+        self.entry = tk.Entry(root)
+        self.entry.pack(pady=5)
 
-# Création du Treeview
-tree = ttk.Treeview(root, columns=("Nom", "Action"), show='headings')
+        # Bouton
+        self.bouton = tk.Button(root, text="Valider", command=self.dire_bonjour)
+        self.bouton.pack(pady=10)
 
-# Définir les en-têtes
-tree.heading("Nom", text="Nom")
-tree.heading("Action", text="Action")
+    def dire_bonjour(self):
+        nom = self.entry.get()
+        messagebox.showinfo("Bonjour", f"Bonjour, {nom} !")
 
-# Définir la largeur des colonnes
-tree.column("Nom", width=150)
-tree.column("Action", width=150)
-
-# Ajouter des données
-for i in range(10):
-    tree.insert("", "end", values=(f"Item {i+1}", "Cliquez ici"))
-
-tree.pack(fill='both', expand=True)
-
-# Lier le clic pour la cellule
-tree.bind("<Button-1>", action_cellule)
-# Lier le clic pour l'en-tête
-tree.bind("<Button-1>", on_heading_click, add='+')
-
-root.mainloop()
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = MonApplication(root)
+    root.mainloop()

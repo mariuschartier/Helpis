@@ -6,6 +6,7 @@ from openpyxl.utils import get_column_letter
 import pandas as pd
 import os
 import win32com.client as win32
+from dateutil.parser import parse
 
 
 import os
@@ -163,15 +164,26 @@ def process_and_format_excel(input_file, sheet_name, output_file):
     print(f"Les données ont été enregistrées dans '{output_file}'.")
 
 def determine_jour(date_str):
-    # Parser la date
-    dt = datetime.strptime(date_str, "%d-%m-%y_%H-%M")
+    # Tenter de parser la date automatiquement
+    dt = parse(date_str, dayfirst=True)
     
-    # Extraire jour du mois, mois et année en format 4 chiffres
-    jour_mois = dt.strftime("%d")  # exemple : '15'
-    mois = dt.strftime("%m")       # exemple : '08'
-    annee = dt.strftime("%Y")      # exemple : '2023'
+    # Extraire jour, mois et année en format 4 chiffres
+    jour_mois = dt.strftime("%d")
+    mois = dt.strftime("%m")
+    annee = dt.strftime("%Y")
     
     return jour_mois, mois, annee
+
+def determine_semaine(dt):
+    """
+    Détermine la semaine ISO pour une date donnée.
+    Accepte un objet datetime ou une chaîne de caractères représentant la date.
+    """
+    if not isinstance(dt, datetime):
+        dt = parse(str(dt), dayfirst=True)
+    annee, semaine, _ = dt.isocalendar()
+    return f"{annee}-S{semaine:02d}", dt
+
 
 def moyenne_par_jour(feuille,output_file ,date_col=0):
     """
@@ -198,9 +210,9 @@ def moyenne_par_jour(feuille,output_file ,date_col=0):
     
         try:
             jour, mois, annee = determine_jour(date_cell)
-        except Exception:
-            continue  # Ignorer si la cellule n'est pas une date valide
-
+        except Exception as e:
+            raise ValueError(f"Erreur sur la date:{e}")
+            
         clef_jour = f"{jour}/{mois}/{annee}"
         if clef_jour not in jours_dict:
             jours_dict[clef_jour] = {"rows": [], "date": clef_jour}
@@ -239,17 +251,15 @@ def moyenne_par_jour(feuille,output_file ,date_col=0):
     print(f"Les données ont été enregistrées dans '{output_file}'.")
 
 
-def determine_semaine(date_str):
-    # Parser la date
-    dt = datetime.strptime(date_str, "%d-%m-%y_%H-%M")
 
-    # Extraire annee et semaine ISO
-    annee, semaine, _ = dt.isocalendar()
-    return f"{annee}-S{semaine:02d}", dt
-
-def moyenne_par_semaine(feuille, output_file,date_col=0):
+def moyenne_par_semaine(feuille, output_file, date_col=0):
     """
-    Calcule la moyenne des valeurs pour chaque semaine dans une feuille Excel."""
+    Calcule la moyenne des valeurs pour chaque semaine dans une feuille Excel.
+    
+    :param feuille: objet contenant le DataFrame 'df', les attributs 'nb_ligne', 'nb_colonne', 'entete', et 'debut_data'
+    :param output_file: nom du fichier Excel de sortie
+    :param date_col: index de la colonne contenant la date
+    """
     wb = Workbook()
     ws = wb.active
     ws.title = "moyenne"
@@ -269,18 +279,17 @@ def moyenne_par_semaine(feuille, output_file,date_col=0):
         date_cell = feuille.df.iloc[idx, date_col]
         if pd.isna(date_cell):
             continue
-        if isinstance(date_cell, datetime):
-            dt = date_cell
-        else:
-            try:
-                dt = datetime.strptime(str(date_cell), "%d-%m-%y_%H-%M")
-            except Exception:
-                continue  # Ignorer si la cellule n'est pas une date valide
-
-        clef_semaine, dt_obj = determine_semaine(dt.strftime("%d-%m-%y_%H-%M"))
+        try:
+            if isinstance(date_cell, datetime):
+                dt_obj = date_cell
+            else:
+                dt_obj = parse(str(date_cell), dayfirst=True)
+            clef_semaine, dt_parsed = determine_semaine(dt_obj)
+        except Exception as e:
+            raise ValueError(f"Erreur sur la date à la ligne {idx}: {e}")
 
         if clef_semaine not in semaines_dict:
-            semaines_dict[clef_semaine] = {"rows": [], "date": dt_obj}
+            semaines_dict[clef_semaine] = {"rows": [], "date": dt_parsed}
         semaines_dict[clef_semaine]["rows"].append(idx)
 
     # Calculer la moyenne pour chaque semaine
@@ -301,19 +310,17 @@ def moyenne_par_semaine(feuille, output_file,date_col=0):
                 moyenne = round(moyenne, 2)
             moyennes.append(moyenne)
 
-        # écrire la semaine en 1re colonne
+        # Écrire la semaine en 1ère colonne
         ws.cell(row=ligne_resultat, column=1, value=clef_semaine)
-        # écrire les moyennes à partir de la 2ème colonne
+        # Écrire les moyennes à partir de la 2ème colonne
         for idx, moyenne in enumerate(moyennes, start=1):
-            ws.cell(row=ligne_resultat, column=idx, value=moyenne)
+            ws.cell(row=ligne_resultat, column=idx + 1, value=moyenne)
 
         ligne_resultat += 1
 
     # Enregistrer le fichier Excel
     wb.save(output_file)
     print(f"Les données ont été enregistrées dans '{output_file}'.")
-
-
 
 
 def entete_une_ligne(feuille: Feuille, output_file):

@@ -13,6 +13,7 @@ from structure.Feuille import Feuille
 from structure.Selection_col import Selection_col
 
 import os
+import sys
 from structure.Entete import Entete
 
 class opti_xls(ttkb.Frame):
@@ -123,9 +124,6 @@ class opti_xls(ttkb.Frame):
         for col in range(num_columns):
             container.grid_columnconfigure(col, weight=1)
 
-
-
-        
     def choisir_fichier(self):
         """
         Ouvre une boîte de dialogue pour sélectionner un fichier Excel (.xls ou .xlsx)."""
@@ -141,6 +139,7 @@ class opti_xls(ttkb.Frame):
 
             if filepath:
                 self.activation_bouton(filepath)
+                self.on_feuille_change()
                 
             
         except Exception as e:
@@ -215,7 +214,6 @@ class opti_xls(ttkb.Frame):
             except Exception as e:
                 messagebox.showerror("Erreur", f"Impossible de lire les feuilles du fichier :\n{e}")
 
-
     def desactivation_bouton(self):
         #entete
         self.detail_btn.config(state="disabled")
@@ -278,7 +276,6 @@ class opti_xls(ttkb.Frame):
 
         self.dico_entete()     
 
-
     def on_feuille_change(self, event=None):
         self.feuille_nom.set(self.feuille_combo.get())
         self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None).copy()
@@ -297,8 +294,7 @@ class opti_xls(ttkb.Frame):
         }
         self.taille_entete_entry.delete(0, tk.END)
         self.taille_entete_entry.insert(0, str(1))
-        print(is_file_locked(self.fichier_path))
-        
+        print(is_file_locked(self.fichier_path))    
 
     # Ouvrir le popup de manipulation de l'entete detaillée
     def ouvrir_popup_manipulation(self):
@@ -465,8 +461,6 @@ class opti_xls(ttkb.Frame):
         self.btn_entete_une_ligne = ttkb.Button(frame_action, text="Entete en une ligne", command=self.controller.bind_button(self.entete_une_ligne))
         self.btn_entete_une_ligne.pack(side="left", padx=5)
 
-        
-
     def champs_separation(self):
         """Crée les champs pour séparer les données d'un fichier Excel par une colonne choisie."""
         frame_action = ttkb.LabelFrame(self, text="4. Création de ficier séparer (xlsx)")
@@ -475,17 +469,23 @@ class opti_xls(ttkb.Frame):
         self.btn_separation.pack(side="left", padx=5)
 
         
-
-
-
 # Préparation des dossiers de sauvegarde et de résultats =========================================================================================================
     def prepare_dossiers(self):
-        """Crée les dossiers nécessaires pour l'application."""
+        print('test')
+        # Récupère le répertoire de l'exécutable
+        if hasattr(sys, '_MEIPASS'):
+            base_dir = Path(sys._MEIPASS)
+        else:
+            base_dir = Path(__file__).parent
 
-        Path("sauvegardes/sauvegardes_tests").mkdir(exist_ok=True)
-        Path("sauvegardes/results").mkdir(exist_ok=True)
-        Path("sauvegardes/data").mkdir(exist_ok=True)
+        sauvegardes_dir = base_dir / 'sauvegardes'
 
+        # Créer les dossiers
+        (sauvegardes_dir / 'sauvegardes_tests').mkdir(parents=True, exist_ok=True)
+        (sauvegardes_dir / 'results').mkdir(parents=True, exist_ok=True)
+        (sauvegardes_dir / 'data').mkdir(parents=True, exist_ok=True)
+
+        print('test2')
 # Validation de la taille de l'en-tête =========================================================================================================
     def on_key_release_int(self, event):
         """Valide l'entrée de la taille de l'en-tête pour s'assurer qu'elle est un entier positif."""
@@ -500,7 +500,9 @@ class opti_xls(ttkb.Frame):
         self.dico_structure = {}
         ligne_entete_debut = self.details_structure.get("entete_debut", 0)
         ligne_entete_fin = self.details_structure.get("entete_fin", 1)
-
+        if self.df is None:
+            messagebox.showerror("Erreur", "Un fichier doit être sélectionné.")
+            return
         try:
             
             for col_idx in range(len(self.df.columns)):
@@ -521,6 +523,7 @@ class opti_xls(ttkb.Frame):
 
         except Exception as e:
             messagebox.showerror("Erreur", "Fichier et taille d'entete requis.")
+            print(e)
             # messagebox.showerror("Erreur", f"Impossible de construire le dictionnaire d'en-tête : {e}")
             return {}
    
@@ -596,11 +599,25 @@ class opti_xls(ttkb.Frame):
         )
         if not fichier_destination:
             return
+        fichier = Fichier(self.fichier_path)
+        feuille = Feuille(fichier, self.feuille_nom.get(),
+                          self.details_structure["data_debut"],
+                          self.details_structure["data_fin"],)
+        entete = Entete(feuille,self.details_structure["entete_debut"],
+                        self.details_structure["entete_fin"],
+                        self.details_structure["nb_colonnes_secondaires"],
+                        self.details_structure["ligne_unite"],
+                        self.dico_entete()
+                        )
+        feuille.entete = entete
+        colonne =  self.afficher_colonne_popup(feuille)
+        print(f"Valeur de colonne : {colonne}|")
     
         try:
+            num_colonne = feuille.entete.placement_colonne[colonne] 
             f1 = Fichier(self.fichier_path)
             f1_1 = Feuille(f1,self.feuille_nom.get())
-            opti_xlsx.moyenne_par_jour(f1_1,fichier_destination)
+            opti_xlsx.moyenne_par_jour(f1_1,fichier_destination,num_colonne)
             self.status_label.config(text="✅ creation terminée avec succès", fg="green")
             messagebox.showinfo("Succès", f"Fichier creer avec succès :\n{fichier_destination}")
         except Exception as e:
@@ -624,8 +641,22 @@ class opti_xls(ttkb.Frame):
         )
         if not fichier_destination:
             return
+        fichier = Fichier(self.fichier_path)
+        feuille = Feuille(fichier, self.feuille_nom.get(),
+                          self.details_structure["data_debut"],
+                          self.details_structure["data_fin"],)
+        entete = Entete(feuille,self.details_structure["entete_debut"],
+                        self.details_structure["entete_fin"],
+                        self.details_structure["nb_colonnes_secondaires"],
+                        self.details_structure["ligne_unite"],
+                        self.dico_entete()
+                        )
+        feuille.entete = entete
+        colonne =  self.afficher_colonne_popup(feuille)
+        print(f"Valeur de colonne : {colonne}|")
     
         try:
+            num_colonne = feuille.entete.placement_colonne[colonne] 
             f1 = Fichier(self.fichier_path)
             f1_1 = Feuille(f1,self.feuille_nom.get())
             opti_xlsx.moyenne_par_semaine(f1_1,fichier_destination)
@@ -664,11 +695,11 @@ class opti_xls(ttkb.Frame):
             initialdir="sauvegardes/results",
             initialfile=opti_fichier.fichier_du_chemin(self.fichier_path)
         )
+
         if not fichier_destination:
             return
     
         try:
-            
             num_colonne = feuille.entete.placement_colonne[colonne] 
             opti_separation.split_excel_by_column(feuille,num_colonne, fichier_destination)
             self.status_label.config(text="✅ creation terminée avec succès", fg="green")

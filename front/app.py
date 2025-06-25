@@ -13,6 +13,7 @@ from structure.Entete import Entete
 from structure.Selection_col import Selection_col
 
 import os
+import sys
 import json
 from pathlib import Path
 import ttkbootstrap as ttkb
@@ -1069,10 +1070,22 @@ class ExcelTesterApp(ttkb.Frame):
 
 # Fonctionnalités d'initialisation et de préparation des dossiers =========================================================================================================
     def prepare_dossiers(self):
-        """Crée les dossiers nécessaires pour l'application."""
-        Path("sauvegardes/sauvegardes_tests").mkdir(exist_ok=True)
-        Path("sauvegardes/results").mkdir(exist_ok=True)
-        Path("sauvegardes/data").mkdir(exist_ok=True)
+        print('test')
+        # Récupère le répertoire de l'exécutable
+        if hasattr(sys, '_MEIPASS'):
+            base_dir = Path(sys._MEIPASS)
+        else:
+            base_dir = Path(__file__).parent
+
+        sauvegardes_dir = base_dir / 'sauvegardes'
+
+        # Créer les dossiers
+        (sauvegardes_dir / 'sauvegardes_tests').mkdir(parents=True, exist_ok=True)
+        (sauvegardes_dir / 'results').mkdir(parents=True, exist_ok=True)
+        (sauvegardes_dir / 'data').mkdir(parents=True, exist_ok=True)
+
+        print('test2')
+
             
 
 # Verification d'une entrée entière =========================================================================================================
