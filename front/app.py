@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import pandas as pd
 import jsonpickle
+import itertools
 
 
 from structure.Fichier import Fichier
@@ -12,21 +13,24 @@ from structure.Entete import Entete
 from structure.Selection_col import Selection_col
 
 import os
+import sys
 import json
 from pathlib import Path
+import ttkbootstrap as ttkb
+from ttkbootstrap.constants import *
 import threading
+
 import webbrowser
 
 
 
-class ExcelTesterApp(tk.Frame):
+class ExcelTesterApp(ttkb.Frame):
     """Page pour detecter les erreurs avec des tests des fichiers Excel."""
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
         super().__init__(parent)
         self.Parent = parent
-   
 
         
         self.fichier_path = None
@@ -103,6 +107,7 @@ class ExcelTesterApp(tk.Frame):
         self.results_frame.pack(fill='both', expand=True, padx=10, pady=5)
         self.error_details_frame.pack(fill='both', expand=True, padx=10, pady=5)
         
+        self.desactivation_bouton()
         
         self.register_scrollable_widgets()
         
@@ -111,7 +116,6 @@ class ExcelTesterApp(tk.Frame):
         self._bind_mousewheel_to_widget(self.table)
         self._bind_mousewheel_to_widget(self.erreur_table)
         
-
 
 # Gestion du scroll =========================================================================================================
     
@@ -151,42 +155,75 @@ class ExcelTesterApp(tk.Frame):
             self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
 
-
-
 # Frame =========================================================================================================
     
-# Champ de chargement du fichier et de l'entete
     def create_file_frame(self):
-        """Crée le cadre pour charger le fichier Excel et configurer l'en-tête."""
-        self.file_frame = tk.LabelFrame(self.scrollable_frame, text="1. Charger un fichier Excel", bg="#f4f4f4")
-        self.file_frame.pack(fill="both", expand=True, padx=10, pady=5)
-    
-        self.fichier_entry = tk.Entry(self.file_frame, width=80)
-        self.fichier_entry.pack(side="left", padx=5, pady=5)
-    
-        tk.Button(self.file_frame, text="Parcourir", command=self.controller.bind_button(self.choisir_fichier)).pack(side="left", padx=5)
-    
-        # Choix de la feuille
-        self.feuille_combo = ttk.Combobox(self.file_frame, textvariable=self.feuille_nom, state="readonly")
-        self.feuille_combo.pack(side="left", padx=5)
-        self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.afficher_excel())
-        
-    
+        """Crée le cadre pour charger le fichier Excel et configurer l'en-tête avec wrapping dynamique et taille minimale."""
+        self.file_frame = ttkb.LabelFrame(self.scrollable_frame, text="1. Charger un fichier Excel")
+        self.file_frame.pack(fill="x", expand=False, padx=10, pady=5)
 
-    
-        # Choix de la taille de l'en-tête
         self.taille_entete_var = tk.StringVar()
-        tk.Label(self.file_frame, text="Taille de l'en-tête :").pack(side="left", padx=(10, 0))
-        self.taille_entete_entry = tk.Entry(self.file_frame, width=5,textvariable=self.taille_entete_var )
-        self.taille_entete_var.set(1)  # Met à jour l'Entry avec 1
-        self.taille_entete_var.trace_add("write", self.on_taille_entete_change)
-        self.taille_entete_entry.pack(side="left", padx=5)
-        tk.Button(self.file_frame, text="❓ Aide", command=self.ouvrir_aide).pack(side="right", padx=5)
-        self.taille_entete_entry.bind("<KeyRelease>", self.on_key_release_int)
+        self.taille_entete_var.set("1")
+        self.widgets_file_frame = []
 
-        tk.Button(self.file_frame, text="detail", command=self.ouvrir_popup_manipulation).pack(side="right", padx=5)
-        return self.file_frame  # Retourne le cadre créé
-    
+        # Widgets à placer dynamiquement
+        self.fichier_entry = tk.Entry(self.file_frame, width=60)
+        self.widgets_file_frame.append(self.fichier_entry)
+
+        parcourir_btn = ttkb.Button(self.file_frame, text="Parcourir", command=self.controller.bind_button(self.choisir_fichier), width=15)
+        self.widgets_file_frame.append(parcourir_btn)
+
+        self.feuille_combo = ttkb.Combobox(self.file_frame, textvariable=self.feuille_nom, state="readonly", width=20)
+        self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.on_feuille_change())
+        self.widgets_file_frame.append(self.feuille_combo)
+
+        # Création d'un sous-frame pour aligner label_entete et taille_entete_entry
+        entete_frame = tk.Frame(self.file_frame, bg="#f4f4f4")
+        label_entete = tk.Label(entete_frame, text="Taille de l'en-tête :")
+        label_entete.pack(side="left")
+
+        self.taille_entete_entry = tk.Entry(entete_frame, width=5, textvariable=self.taille_entete_var)
+        self.taille_entete_var.trace_add("write", self.on_taille_entete_change)
+        self.taille_entete_entry.bind("<KeyRelease>", self.on_key_release_int)
+        self.taille_entete_entry.pack(side="left", padx=5)
+
+        self.widgets_file_frame.append(entete_frame)
+
+
+        self.detail_btn = ttkb.Button(self.file_frame, text="detail", command=self.ouvrir_popup_manipulation, width=10)
+        self.widgets_file_frame.append(self.detail_btn)
+
+        aide_btn = ttkb.Button(self.file_frame, text="❓ Aide", command=self.ouvrir_aide, width=10)
+        self.widgets_file_frame.append(aide_btn)
+
+
+
+        self.file_frame.bind("<Configure>", lambda event: self.arrange_widgets_file_frame(self.file_frame, self.widgets_file_frame))
+
+        return self.file_frame
+
+    def arrange_widgets_file_frame(self, container:tk.Frame, widgets, event=None):
+        """ Organise les widgets dans le cadre de fichier en fonction de la largeur disponible. """
+        container.update_idletasks()
+        width = container.winfo_width()
+        widget_width = 150  # largeur minimale estimée par widget
+        num_columns = max(1, width // widget_width)
+        # print(f"width = {width}")
+        # print(f"widget_width = {widget_width}")
+        # print(f"nb_colonne = {num_columns}")
+
+
+        for widget in container.winfo_children():
+            widget.grid_forget()
+
+        for index, widget in enumerate(widgets):
+            row = index // num_columns
+            col = index % num_columns
+            widget.grid(row=row, column=col, padx=5, pady=5, sticky="ew")
+
+        for col in range(num_columns):
+            container.grid_columnconfigure(col, weight=1)
+
     def on_taille_entete_change(self, *args):
         """
         Met à jour la fin de l'en-tête 
@@ -202,12 +239,41 @@ class ExcelTesterApp(tk.Frame):
         self.details_structure["data_debut"] = self.details_structure["entete_fin"]+1
 
         self.enlever_toutes_couleurs()
+        # self.colorier_ligne(self.details_structure["ligne_unite"],"#3CFF00")
+
         self.colorier_lignes_range(
             self.details_structure["entete_debut"],
             self.details_structure["entete_fin"])
+        # print(self.details_structure["ligne_unite"])
+        # self.colorier_ligne(self.details_structure["ligne_unite"],"#3CFF00")
+
 
         self.dico_entete()
+
+    
+    def on_feuille_change(self, event=None):
+        """Met à jour le nom de la feuille et charge les données correspondantes."""
+        self.feuille_nom.set(self.feuille_combo.get())
+        self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None).copy()
+
+
+        # print(f"Feuille changée : {self.feuille_nom.get()}")      
+        # print(f"DataFrame shape : {self.df.shape}")
+        self.taille_entete_entry.delete(0, tk.END)
+        self.taille_entete_entry.insert(0, str(1))
+        self.details_structure = {
+            "entete_debut": 0,
+            "entete_fin": 0,
+            "data_debut": 1,
+            "data_fin": self.df.shape[0] if self.df is not None else None,
+            "nb_colonnes_secondaires": 0,
+            "ligne_unite": 0,
+            "ignorer_vide": True
+        }
+        self.afficher_excel()       
+        self.erreur_table.delete(*self.erreur_table.get_children())
  
+    
     def ouvrir_aide(self):
         """Ouvre une fenêtre d'aide avec des instructions sur l'utilisation de l'application."""
         aide_popup = tk.Toplevel(self)
@@ -245,13 +311,15 @@ class ExcelTesterApp(tk.Frame):
             self.fichier_entry.delete(0, tk.END)
             self.fichier_entry.insert(0, filepath)
             try:
-                xls = pd.ExcelFile(filepath)
-                self.feuille_combo['values'] = xls.sheet_names
+                with pd.ExcelFile(filepath) as xls:
+                    self.feuille_combo['values'] = xls.sheet_names                
                 self.feuille_combo.set(xls.sheet_names[0])
                 self.afficher_excel()
                 self.lien_fichier()
+                self.activation_bouton()
             except Exception as e:
                 messagebox.showerror("Erreur", f"Impossible de lire les feuilles du fichier : {e}")
+
     def lien_fichier(self):
         """Crée un lien cliquable pour ouvrir le fichier, en supprimant le précédent si nécessaire."""
         # Si le label existe déjà, le détruire avant d'en créer un nouveau
@@ -277,65 +345,77 @@ class ExcelTesterApp(tk.Frame):
             # Si pas Windows ou si vous souhaitez ouvrir dans le navigateur :
             webbrowser.open(fichier)
     
-    # Ouvrir le popup de manipulation de l'entete detaillée
+        # Ouvrir le popup de manipulation de l'entete detaillée
+
     def ouvrir_popup_manipulation(self):
         """Ouvre un popup pour configurer les paramètres avancés de la feuille."""
-        if self.df is None:            
-            messagebox.showerror("Erreur", "Un fichier doit etre selectionné.")
+
+        # print("details_structure :")
+        # print(self.details_structure)
+
+        if self.df is None:
+            messagebox.showerror("Erreur", "Un fichier doit être sélectionné.")
             return
+
         popup = tk.Toplevel(self)
         popup.title("Paramètres avancés de la feuille")
-        popup.configure(bg="#f4f4f4")
+        popup.configure(bg="#ffffff")
         popup.grab_set()
 
         tk.Label(popup, text="Paramètres de lecture du fichier", font=("Segoe UI", 11, "bold"), bg="#f4f4f4").pack(pady=10)
-    
+
         champs = [
             ("Début de l'en-tête :", "entete_debut"),
             ("Fin de l'en-tête :", "entete_fin"),
             ("Début des données :", "data_debut"),
             ("Fin des données :", "data_fin"),
             ("Colonnes secondaires :", "nb_colonnes_secondaires"),
-            ("Ligne des unités :", "ligne_unite"),  # 🆕 Champ ajouté
+            ("Ligne des unités :", "ligne_unite"),
         ]
-    
+
         entries = {}
-        valeurs_par_defaut = self.details_structure if hasattr(self, "details_structure") else {}
-    
+        valeurs_par_defaut = {
+            "entete_debut": 0,
+            "entete_fin": 0,
+            "data_debut": 1,
+            "data_fin": self.df.shape[0],
+            "nb_colonnes_secondaires": 0,
+            "ligne_unite": 0,
+            "ignorer_vide": True
+        }
+        data  = self.details_structure if hasattr(self, "details_structure") else valeurs_par_defaut
+        
+
         for label, key in champs:
             frame = tk.Frame(popup, bg="#f4f4f4")
             frame.pack(fill="x", padx=10, pady=2)
             tk.Label(frame, text=label, width=25, anchor="w", bg="#f4f4f4").pack(side="left")
-        
+
             vcmd = (self.register(lambda val: val.isdigit() or val == ""), '%P')
             entry = tk.Entry(frame, validate="key", validatecommand=vcmd)
             entry.pack(side="left", fill="x", expand=True)
-            valeur_defaut = valeurs_par_defaut.get(key, "")
-            if key == "data_fin":
+
+            if key == "data_fin" and data["data_fin"] is None:
                 try:
-                    valeur_defaut = str(self.df.shape[0])  # Nombre de lignes du DataFrame
+                    valeur_defaut = str(self.df.shape[0])
                 except AttributeError:
-                    messagebox.showwarning("Attention", "La feuille de données n'existe pas. La valeur de 'Fin des données' ne peut pas être déterminée.")
                     valeur_defaut = ""
-            if key == "data_fin":
-                try:
-                    entry.insert(0, str(self.df.shape[0]))
-                except AttributeError:
-                    entry.insert(0, "")
             else:
-                entry.insert(0, str(valeur_defaut))  # Initialise avec la valeur par défaut si disponible
-            
+                valeur_defaut = data.get(key, "")
+
+            entry.insert(0, str(valeur_defaut))
             entries[key] = entry
 
-        # ✅ Check : ignorer lignes vides (coché par défaut)
+        # ✅ Check : ignorer lignes vides
         ignore_lignes_vides = tk.BooleanVar(value=True)
         frame_cb = tk.Frame(popup, bg="#f4f4f4")
         frame_cb.pack(padx=10, pady=5, anchor="w")
-        tk.Checkbutton(popup, text="Ignorer les lignes vides", variable=ignore_lignes_vides, bg="#f4f4f4").pack(side="left")
+
+        tk.Checkbutton(frame_cb, text="Ignorer les lignes vides", variable=ignore_lignes_vides, bg="#f4f4f4").pack(side="left")
+
         def reset_valeur():
             """Réinitialise les valeurs des champs à leurs valeurs par défaut."""
             for key, entry in entries.items():
-                valeur_defaut = valeurs_par_defaut.get(key, "")
                 if key == "data_fin":
                     try:
                         entry.delete(0, tk.END)
@@ -344,97 +424,126 @@ class ExcelTesterApp(tk.Frame):
                         entry.delete(0, tk.END)
                         entry.insert(0, "")
                 else:
+                    valeur_defaut = valeurs_par_defaut.get(key, "")
                     entry.delete(0, tk.END)
                     entry.insert(0, str(valeur_defaut))
 
             ignore_lignes_vides.set(True)
-            
-        tk.Button(frame_cb, text="Réinitialisation", command=reset_valeur).pack(side="left", padx=10)
 
-
-            
+        ttkb.Button(frame_cb, text="Réinitialisation", command=reset_valeur).pack(side="left", padx=10)
 
         # ⚠️ Zone de message d'erreur
         label_erreur = tk.Label(popup, text="", fg="red", bg="#f4f4f4", font=("Segoe UI", 9, "italic"))
         label_erreur.pack(pady=5)
-    
+
         # ✅ Boutons
         frame_btns = tk.Frame(popup, bg="#f4f4f4")
         frame_btns.pack(pady=10)
-    
-        def appliquer():
+
+        def appliquer_parametres():
             try:
                 valeurs = {k: int(e.get()) for k, e in entries.items()}
             except ValueError:
                 messagebox.showerror("Erreur", "Tous les champs doivent être remplis avec des entiers valides.")
                 return
-        
-            # Calcul automatique de la taille d’en-tête
+
+            # Validation
             taille_entete = valeurs["entete_fin"] - valeurs["entete_debut"] + 1
             if taille_entete <= 0:
                 messagebox.showerror("Erreur", "L'entête doit contenir au moins une ligne.")
                 return
-        
-            # Vérification des contraintes
+
             if valeurs["entete_fin"] >= valeurs["data_debut"]:
                 messagebox.showerror("Erreur", "La fin de l'entête doit être avant le début des données.")
                 return
-        
+
             if valeurs["nb_colonnes_secondaires"] >= taille_entete:
                 messagebox.showerror("Erreur", "Le nombre de colonnes secondaires doit être inférieur à la taille de l'entête.")
                 return
-        
+
             if not (valeurs["entete_debut"] <= valeurs["ligne_unite"] <= valeurs["entete_fin"]):
                 messagebox.showerror("Erreur", "La ligne d'unité doit être comprise dans l'entête.")
                 return
-        
-            # Appliquer les valeurs
-            
-        
-            # Optionnel : garder les valeurs pour un usage futur
+
+            # Appliquer
             valeurs["ignorer_lignes_vides"] = ignore_lignes_vides.get()
             self.details_structure = valeurs
+            # print("valeur :")
+            # print(valeurs)
+            # print("details_structure :")
+            # print(self.details_structure)
 
-            self.taille_entete_entry.delete(0, tk.END)
-            self.taille_entete_entry.insert(0, str(taille_entete))
+            if hasattr(self, "taille_entete_entry"):
+                self.taille_entete_entry.delete(0, tk.END)
+                self.taille_entete_entry.insert(0, str(taille_entete))
+
             popup.destroy()
 
-        tk.Button(frame_btns, text="✅ Appliquer", command=appliquer).pack(side="left", padx=10)
-        tk.Button(frame_btns, text="❌ Annuler", command=popup.destroy).pack(side="left", padx=10)
-
-
+        ttkb.Button(frame_btns, text="✅ Appliquer", command=appliquer_parametres).pack(side="left", padx=10)
+        ttkb.Button(frame_btns, text="❌ Annuler", command=popup.destroy).pack(side="left", padx=10)
 
 
 # Champs de test
     def create_test_buttons_frame(self):
-        """Crée le cadre pour les boutons de test."""
-        frame_btn_test = tk.Frame(self.scrollable_frame)
-        frame_btn_test.pack(fill="both", expand=True, padx=10, pady=5)
+        """Crée le cadre pour les boutons de test et organise leur disposition."""
+        self.frame_btn_test = tk.Frame(self.scrollable_frame)
+        self.frame_btn_test.pack(fill="both", expand=True, padx=10, pady=5)
 
-        tk.Button(frame_btn_test, text="Ajouter un test générique", command=self.controller.bind_button(self.popup_ajouter_test_gen)).pack(side="left", padx=10)
-        tk.Button(frame_btn_test, text="Ajouter un test spécifique", command=self.controller.bind_button(self.popup_ajouter_test_spe)).pack(side="left", padx=10)
-        tk.Button(frame_btn_test, text="Exécuter les tests", command=self.controller.bind_button(self.executer_tests)).pack(side="left", padx=10)
-        tk.Button(frame_btn_test, text="💾 Sauvegarder les tests", command=self.controller.bind_button(self.sauvegarder_tests)).pack(side="left", padx=10)
-        tk.Button(frame_btn_test, text="📂 Importer des tests", command=self.controller.bind_button(self.importer_tests)).pack(side="left", padx=10)
-        return frame_btn_test
 
+        # Créer les boutons et les stocker dans une liste
+        boutons_tests = []
+
+        self.btn_popup_ajouter_test_gen = ttkb.Button(self.frame_btn_test, text="Ajouter un test générique", command=self.controller.bind_button(self.popup_ajouter_test_gen))
+        # btn1.pack(side="left", padx=10)
+        boutons_tests.append(self.btn_popup_ajouter_test_gen)
+
+        self.btn_popup_ajouter_test_spe = ttkb.Button(self.frame_btn_test, text="Ajouter un test spécifique", command=self.controller.bind_button(self.popup_ajouter_test_spe))
+        # btn2.pack(side="left", padx=10)
+        boutons_tests.append(self.btn_popup_ajouter_test_spe)
+
+        self.btn_executer_tests = ttkb.Button(self.frame_btn_test, text="Exécuter les tests", command=self.controller.bind_button(self.executer_tests))
+        # btn3.pack(side="left", padx=10)
+        boutons_tests.append(self.btn_executer_tests)
+
+        self.btn_sauvegarder_tests = ttkb.Button(self.frame_btn_test, text="💾 Sauvegarder les tests", command=self.controller.bind_button(self.sauvegarder_tests))
+        # btn4.pack(side="left", padx=10)
+        boutons_tests.append(self.btn_sauvegarder_tests)
+
+        self.btn_importer_tests = ttkb.Button(self.frame_btn_test, text="📂 Importer des tests", command=self.controller.bind_button(self.importer_tests))
+        # btn5.pack(side="left", padx=10)
+        boutons_tests.append(self.btn_importer_tests)
+
+        # Appliquer la fonction pour organiser les boutons
+        # self.arrange_widgets_file_frame(self.frame_btn_test, boutons_tests)
+        self.frame_btn_test.bind("<Configure>", lambda event: self.arrange_widgets_file_frame(self.frame_btn_test, boutons_tests))
+
+
+        return self.frame_btn_test
+    
     def create_test_list_frame(self):
         """Crée le cadre pour la liste des tests."""
-        self.test_list_frame = tk.LabelFrame(self.scrollable_frame, text="2. Liste des tests", bg="#f4f4f4")
+        self.test_list_frame = ttkb.LabelFrame(self.scrollable_frame, text="2. Liste des tests")
         self.test_list_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        # Détail des tests
-        self.test_listbox = tk.Listbox(self.test_list_frame, height=5, selectmode="extended")
+        # Frame pour la Listbox et la scrollbar côte à côte
+        list_frame = tk.Frame(self.test_list_frame, bg="#f4f4f4")
+        list_frame.pack(fill="both", expand=True)
+
+        # Listbox
+        self.test_listbox = tk.Listbox(list_frame, height=5, selectmode="extended")
         self.test_listbox.pack(side="left", fill="both", expand=True)
 
-        scrollbar_list = tk.Scrollbar(self.test_list_frame, command=self.test_listbox.yview)
+        # Scrollbar attachée à la Listbox
+        scrollbar_list = tk.Scrollbar(list_frame, command=self.test_listbox.yview)
         scrollbar_list.pack(side="right", fill="y")
         self.test_listbox.config(yscrollcommand=scrollbar_list.set)
+
+        # Double clic sur la liste
         self.test_listbox.bind("<Double-Button-1>", self.afficher_details_popup)
 
-        # Retirer les tests
-        tk.Button(self.test_list_frame, text="Retirer le test sélectionné", command=self.supprimer_test).pack(pady=5)
-        
+        # Bouton pour retirer le test sélectionné
+        ttkb.Button(self.test_list_frame, text="Retirer le test sélectionné", command=self.supprimer_test).pack(pady=5)
+
         return self.test_list_frame
 
     def supprimer_test(self):
@@ -451,7 +560,7 @@ class ExcelTesterApp(tk.Frame):
     
     def sauvegarder_tests(self):
         """Sauvegarde les tests dans un fichier JSON."""
-        Path("sauvegardes_tests").mkdir(exist_ok=True)
+        Path("sauvegardes/sauvegardes_tests").mkdir(exist_ok=True)
         
         chemin = filedialog.asksaveasfilename(
             defaultextension=".json",
@@ -469,14 +578,15 @@ class ExcelTesterApp(tk.Frame):
             obj = test[0]
 
             if isinstance(obj, Test_gen):
-                _, type_test, val_min, val_max = test
+                _, type_test, val_min, val_max,ecart_moy = test
                 export.append({
                     "type": "gen",
                     "nom": obj.nom,
                     "critere": obj.critere,
                     "test_type": type_test,
                     "val_min": val_min,
-                    "val_max": val_max
+                    "val_max": val_max,
+                    "ecart_moy":ecart_moy
                 })
 
             elif isinstance(obj, Test_spe):
@@ -534,7 +644,9 @@ class ExcelTesterApp(tk.Frame):
                                 obj, 
                                 test_data["test_type"], 
                                 test_data.get("val_min"), 
-                                test_data.get("val_max")
+                                test_data.get("val_max"),
+                                test_data.get("ecart_moy")
+
                             ))
                         self.test_listbox.insert(tk.END, f"[GEN] {test_data['nom']} ({test_data['test_type']})")
 
@@ -592,6 +704,7 @@ class ExcelTesterApp(tk.Frame):
         col2 = rest[1] if len(rest) > 1 else None
         val1 = rest[2] if len(rest) > 2 else None
         val2 = rest[3] if len(rest) > 3 else None
+        ecart_moy = rest[4] if len(rest) > 4 else None
 
         # Titre et type
         tk.Label(popup, text=f"Nom : {test_obj.nom}", font=("Segoe UI", 10, "bold")).pack(pady=5)
@@ -607,6 +720,9 @@ class ExcelTesterApp(tk.Frame):
                     "val_entre": [("Colonne", col1), ("Valeur Min", val1),  ("Valeur Max", val2)],
                     "compare_fix": [("Colonne 1", col1), ("Colonne 2", col2), ("Différence max", val1)],
                     "compare_ratio": [("Colonne 1", col1), ("Colonne 2", col2), ("Ratio autorisé", val1)],
+                    "ecart_moy": [("Colonne", col1), ("ecart_moy", val1)],
+                    "ecart_moy_ratio": [("Colonne", col1), ("ecart_moy", val1)],
+
                 }
                 return champs_spe.get("type_test", []) + champs_spe.get(test_type, [])
             elif isinstance(test_obj, Test_gen):
@@ -616,6 +732,10 @@ class ExcelTesterApp(tk.Frame):
                     "val_min": [("Critères", critere_str), ("Valeur Min", col1 if col1 is not None else "N/A")],
                     "val_max": [("Critères", critere_str), ("Valeur Max", col2 if col2 is not None else "N/A")],
                     "val_entre": [("Critères", critere_str), ("Valeur Min", val1 if val1 is not None else "N/A"), ("Valeur Max", val2 if val2 is not None else "N/A")],
+                    "ecart_moy": [("Critères", critere_str), ("ecart_moy", ecart_moy if ecart_moy is not None else "N/A")],
+                    "ecart_moy_ratio": [("Critères", critere_str), ("ecart_moy_ratio", ecart_moy if ecart_moy is not None else "N/A")],
+
+
                 }
                 return champs_gen.get("type_test", []) + champs_gen.get(test_type, [])
             else:
@@ -629,16 +749,15 @@ class ExcelTesterApp(tk.Frame):
                 tk.Label(popup, text=f"{champ} : {valeur}").pack(anchor="w", padx=20)
 
 
-
 # Affichage de l'aperçu du fichier Excel
     def create_excel_preview_frame(self):
         """Crée le cadre pour l'aperçu du fichier Excel."""
         # Créer un LabelFrame
-        self.excel_preview_frame = tk.LabelFrame(self.scrollable_frame, text="3. Aperçu du fichier Excel", bg="#f4f4f4")
+        self.excel_preview_frame = ttkb.LabelFrame(self.scrollable_frame, text="3. Aperçu du fichier Excel")
         self.excel_preview_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
         # Créer le Treeview avec une colonne pour les numéros de ligne
-        self.table = ttk.Treeview(self.excel_preview_frame, show="tree headings", height=15)
+        self.table = ttk.Treeview(self.excel_preview_frame, show="tree headings", height=15,style="Custom.Treeview")
         self.table.grid(row=0, column=0, sticky="nsew")
 
         # Scrollbars attachées au LabelFrame
@@ -660,7 +779,7 @@ class ExcelTesterApp(tk.Frame):
         self.table["columns"] = col_names
 
         self.table.heading("#0", text="Ligne", anchor="center")
-        self.table.column("#0", width=40, minwidth=30, anchor="center", stretch=False)
+        self.table.column("#0", width=50, minwidth=30, anchor="center", stretch=False)
         for name in col_names:
             self.table.heading(name, text=name)
             self.table.column(name, anchor="center", width=120, minwidth=100, stretch=True)
@@ -681,14 +800,14 @@ class ExcelTesterApp(tk.Frame):
         if self.table.winfo_width() > max_width:
             self.table.config(width=max_width)
 
-    def afficher_excel(self):
-        """Affiche le contenu du fichier Excel dans le tableau."""
+    def update_excel(self):
+        """Met à jour le tableau avec les données du fichier Excel."""
         try:
-            # Vider les anciennes données
             self.table.delete(*self.table.get_children())
 
-            # Lire le fichier Excel
-            self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None)
+        # Lire le fichier Excel
+            self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None).copy()
+
             nb_cols = len(self.df.columns)
             col_names = [f"Col {i+1}" for i in range(nb_cols)]
 
@@ -702,7 +821,22 @@ class ExcelTesterApp(tk.Frame):
             # Remplir le tableau
             for i, row in self.df.head(50).iterrows():
                 self.table.insert("", "end", text=str(i), values=list(row))
-            self.colorier_ligne(self.details_structure["entete_debut"])
+            self.colorier_lignes_range(
+                self.details_structure["entete_debut"],
+                self.details_structure["entete_fin"])
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Impossible de lire le fichier : {e}")
+        self.dico_entete()
+        
+        
+    def afficher_excel(self):
+        """Affiche le contenu du fichier Excel dans le tableau."""
+        try:
+            # Vider les anciennes données
+            self.taille_entete_entry.delete(0, tk.END)
+            self.taille_entete_entry.insert(0, str(1))
+
+            self.update_excel()
         except Exception as e:
             messagebox.showerror("Erreur", f"Impossible de lire le fichier : {e}")
         self.dico_entete()
@@ -748,7 +882,6 @@ class ExcelTesterApp(tk.Frame):
         # S'assurer que ligne_debut est inférieur ou égal à ligne_fin
         if ligne_debut > ligne_fin:
             ligne_debut, ligne_fin = ligne_fin, ligne_debut
-
         for ligne_numero in range(ligne_debut, ligne_fin + 1):
             self.colorier_ligne(ligne_numero, couleur)
 
@@ -778,12 +911,11 @@ class ExcelTesterApp(tk.Frame):
                 self.table.item(item, tags=tags)
                 break
 
-
 # Champs de résultats
     def create_results_frame(self):
         """Crée le cadre pour afficher les résultats des tests."""
         # Cadre pour les résultats du test
-        self.results_frame = tk.LabelFrame(self, text="4. Résultats du test", bg="#f4f4f4")
+        self.results_frame = ttkb.LabelFrame(self, text="4. Résultats du test")
         self.results_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
         # Barre de défilement verticale
@@ -824,37 +956,148 @@ class ExcelTesterApp(tk.Frame):
 # Affichage des détails des erreurs 
     def create_error_details_frame(self):
         """Crée le cadre pour afficher les détails des erreurs."""
-        self.error_details_frame = tk.LabelFrame(self.scrollable_frame, text="5. Détails des erreurs", bg="#f4f4f4")
+        self.error_details_frame = ttkb.LabelFrame(self.scrollable_frame, text="5. Détails des erreurs")
         self.error_details_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        self.erreur_table = ttk.Treeview(self.error_details_frame, columns=("Ligne", "Colonne", "Valeur"), show="headings")
+        # Frame pour contenir la Treeview et les scrollbar
+        tree_frame = tk.Frame(self.error_details_frame, bg="#f4f4f4")
+        tree_frame.pack(fill="both", expand=True)
+
+        # La Treeview
+        self.erreur_table = ttk.Treeview(tree_frame, columns=("Ligne", "Colonne", "Valeur","Bouton suppression"), show="headings")
         self.erreur_table.heading("Ligne", text="Ligne")
         self.erreur_table.heading("Colonne", text="Colonne")
         self.erreur_table.heading("Valeur", text="Valeur d'erreur")
+        self.erreur_table.heading("Bouton suppression", text="Tout supprimer")
+
         self.erreur_table.pack(side="left", fill="both", expand=True)
 
-        # Barres de défilement pour les détails des erreurs
-        err_scroll_y = tk.Scrollbar(self.error_details_frame, orient="vertical", command=self.erreur_table.yview)
+        # Barre de défilement verticale
+        err_scroll_y = tk.Scrollbar(tree_frame, orient="vertical", command=self.erreur_table.yview)
         err_scroll_y.pack(side="right", fill="y")
+
+        # Barre de défilement horizontale
         err_scroll_x = tk.Scrollbar(self.error_details_frame, orient="horizontal", command=self.erreur_table.xview)
         err_scroll_x.pack(fill="x")
 
+        # Lier les scrollbar à la Treeview
         self.erreur_table.configure(yscrollcommand=err_scroll_y.set, xscrollcommand=err_scroll_x.set)
+
+        # Lier le clic pour la cellule
+        self.erreur_table.bind("<Button-1>", self.action_cellule)
+        # Lier le clic pour l'en-tête
+        self.erreur_table.bind("<Button-1>", self.on_heading_click, add='+')
+
         return self.error_details_frame
-
-
         # texte.config(state="disabled")
 
+    def action_cellule(self, event):
+        """Gère l'action à effectuer lorsqu'une cellule est cliquée."""
+        # Identifier la région cliquée
+        region = self.erreur_table.identify('region', event.x, event.y)
+        if region == 'cell':
+            # Identifier la ligne et la colonne
+            row_id = self.erreur_table.identify_row(event.y)
+            col_id = self.erreur_table.identify_column(event.x)
+            # Vérifier si c'est la colonne 'Action'
+            if col_id == '#4':  
+                item = self.erreur_table.item(row_id)
+                values = item['values']
+                # Appeler la fonction spécifique
+                try:
+                    ligne_excel = int(values[0])  # Index 1-based déjà ?
+                    self.feuille.suppression_ligne_unique(ligne_excel)
+                    self.erreur_table.delete(row_id)  # Supprimer de l'affichage aussi
+                    messagebox.showinfo("Action", f"Ligne {ligne_excel} supprimée.")
+                    self.recharger_erreur_table()
+                except Exception as e:
+                    messagebox.showerror("Erreur", f"Impossible de supprimer la ligne : {e}")
+            # Ajoutez d'autres conditions si nécessaire
+
+    def on_heading_click(self, event):
+        """Gère l'action à effectuer lorsqu'un en-tête est cliqué."""
+        region = self.erreur_table.identify('region', event.x, event.y)
+        if region == 'heading':
+            col = self.erreur_table.identify_column(event.x)
+            if col == '#4': 
+                lignes_diff_zero = [
+                    i + 1  # Excel est 1-based
+                    for i, ligne in enumerate(self.feuille.erreurs)
+                    if any(val != 0 for val in ligne)
+                ]
+
+                if not lignes_diff_zero:
+                    messagebox.showinfo("Info", "Aucune ligne à supprimer.")
+                    return
+
+                confirmation = messagebox.askyesno(
+                    "Suppression multiple",
+                    f"Supprimer {len(lignes_diff_zero)} lignes contenant des erreurs ?"
+                )
+
+                if confirmation:
+                    self.feuille.suppression_ligne_liste(lignes_diff_zero)
+                    self.recharger_erreur_table()  # fonction à ajouter
+                    messagebox.showinfo("Terminé", "Lignes supprimées.")
+
+    def recharger_erreur_table(self):
+        """Recharge la table des erreurs en supprimant les anciennes entrées et en réaffichant les erreurs."""
+        self.erreur_table.delete(*self.erreur_table.get_children())
+        self.afficher_erreurs()  # fonction qui parcourt `feuille.erreurs` et les réaffiche
+
+    def afficher_erreurs(self):
+        """Affiche les erreurs dans la table des erreurs."""
+        self.feuille.error_all_cell_colors()
+        self.df = self.feuille.df
+        self.update_excel()
+        i = 0
+        for row_idx, ligne in enumerate(self.feuille.erreurs):
+            for col_idx, code in enumerate(ligne):
+                try:
+                    if float(code) > 0:
+                        i += 1
+                        valeur = self.feuille.df.iloc[row_idx, col_idx]
+                        self.erreur_table.insert("", "end", values=(
+                            row_idx + 1,
+                            col_idx + 1,
+                            valeur,
+                            "Supprimer cette ligne"
+                        ))
+                        if i >= 10:
+                            break
+                except (ValueError, TypeError):
+                    continue  # Si `code` n'est pas un nombre, on ignore
+
+            if i >= 100:
+                break
+        
 
 
 # Fonctionnalités d'initialisation et de préparation des dossiers =========================================================================================================
     def prepare_dossiers(self):
-        """Crée les dossiers nécessaires pour l'application."""
-        Path("sauvegardes/sauvegardes_tests").mkdir(exist_ok=True)
-        Path("sauvegardes/results").mkdir(exist_ok=True)
-        Path("sauvegardes/data").mkdir(exist_ok=True)
-            
+        """Prépare les dossiers nécessaires pour le fonctionnement de l'application.
+        Crée les dossiers 'sauvegardes/sauvegardes_tests', 'sauvegardes/results' et 'sauvegardes/data'.
+        """
+        # Récupère le répertoire de l'exécutable
+        Path("sauvegardes/sauvegardes_tests").mkdir(parents=True,exist_ok=True)
+        Path("sauvegardes/results").mkdir(parents=True,exist_ok=True)
+        Path("sauvegardes/data").mkdir(parents=True,exist_ok=True)
 
+
+        if hasattr(sys, '_MEIPASS'):
+            base_dir = Path(sys._MEIPASS)
+        else:
+            base_dir = Path(__file__).parent
+
+        sauvegardes_dir = base_dir / 'sauvegardes'
+
+        # Créer les dossiers
+        (sauvegardes_dir / 'sauvegardes_tests').mkdir(parents=True, exist_ok=True)
+        (sauvegardes_dir / 'results').mkdir(parents=True, exist_ok=True)
+        (sauvegardes_dir / 'data').mkdir(parents=True, exist_ok=True)
+
+
+            
 
 # Verification d'une entrée entière =========================================================================================================
     def validate_integer_input(self, P):
@@ -878,6 +1121,7 @@ class ExcelTesterApp(tk.Frame):
         ligne_entete_fin = self.details_structure.get("entete_fin", 1)
 
         try:
+            
             for col_idx in range(len(self.df.columns)):
                 current_level = self.dico_structure
 
@@ -900,6 +1144,31 @@ class ExcelTesterApp(tk.Frame):
             return {}
    
 
+# Activation/desactivation des element =========================================================================================================
+    def activation_bouton(self):
+        """Active les boutons et champs nécessaires pour l'interaction."""
+        self.taille_entete_entry.config(state="normal")
+        self.detail_btn.config(state="normal")
+
+        self.btn_popup_ajouter_test_gen.config(state="normal")
+        self.btn_popup_ajouter_test_spe.config(state="normal")
+        self.btn_executer_tests.config(state="normal")
+        self.btn_sauvegarder_tests.config(state="normal")
+        self.btn_importer_tests.config(state="normal")
+
+    def desactivation_bouton(self):
+        """Désactive les boutons et champs pour empêcher l'interaction."""
+        #entete
+        self.taille_entete_entry.config(state="disabled")
+        self.detail_btn.config(state="disabled")
+
+        # self.btn_popup_ajouter_test_gen.config(state="disabled")
+        self.btn_popup_ajouter_test_spe.config(state="disabled")
+        self.btn_executer_tests.config(state="disabled")
+        self.btn_sauvegarder_tests.config(state="disabled")
+        self.btn_importer_tests.config(state="disabled")
+
+
 
 # Definition des tests =========================================================================================================
 
@@ -921,7 +1190,7 @@ class ExcelTesterApp(tk.Frame):
 
         # Type de test
         tk.Label(popup, text="Type de test :").grid(row=2, column=0, sticky="w")
-        type_test = ttk.Combobox(popup, values=["val_min", "val_max", "val_entre"], state="readonly")
+        type_test = ttk.Combobox(popup, values=["val_min", "val_max", "val_entre", "ecart_moy", "ecart_moy_ratio"], state="readonly")
         type_test.grid(row=2, column=1)
         type_test.set("val_min")
 
@@ -932,13 +1201,19 @@ class ExcelTesterApp(tk.Frame):
         label_val_max = tk.Label(popup, text="Valeur maximale :")
         val_max_entry = tk.Entry(popup)
 
+        label_ecart_moy = tk.Label(popup, text="Écart à la moyenne")
+        ecart_moy_entry = tk.Entry(popup)
+
+        label_ecart_moy_ratio = tk.Label(popup, text="Écart à la moyenne (ratio)")
+        ecart_moy_ratio_entry = tk.Entry(popup)
+
         # Masquer tous les champs dynamiques au départ
-        for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry]:
+        for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_ecart_moy, ecart_moy_entry,label_ecart_moy_ratio, ecart_moy_ratio_entry]:
             widget.grid_forget()
 
         def afficher_champs_selon_type(event=None):
             """Affiche uniquement les champs nécessaires en fonction du type de test."""
-            for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry]:
+            for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_ecart_moy, ecart_moy_entry,label_ecart_moy_ratio, ecart_moy_ratio_entry]:
                 widget.grid_forget()
 
             t = type_test.get()
@@ -949,13 +1224,19 @@ class ExcelTesterApp(tk.Frame):
                 val_min_entry.grid(row=ligne, column=1)
             elif t == "val_max":
                 label_val_max.grid(row=ligne, column=0, sticky="w")
-                val_max_entry.grid(row=ligne, column=1)
+                val_max_entry.grid(row=ligne, column=1) 
             elif t == "val_entre":
                 label_val_min.grid(row=ligne, column=0, sticky="w")
                 val_min_entry.grid(row=ligne, column=1)
                 ligne += 1
                 label_val_max.grid(row=ligne, column=0, sticky="w")
                 val_max_entry.grid(row=ligne, column=1)
+            elif t== "ecart_moy":
+                label_ecart_moy.grid(row=ligne, column=0, sticky="w")
+                ecart_moy_entry.grid(row=ligne, column=1)
+            elif t== "ecart_moy_ratio":
+                label_ecart_moy_ratio.grid(row=ligne, column=0, sticky="w")
+                ecart_moy_ratio_entry.grid(row=ligne, column=1)
 
         # Lier l'événement de changement de type de test
         type_test.bind("<<ComboboxSelected>>", afficher_champs_selon_type)
@@ -968,8 +1249,15 @@ class ExcelTesterApp(tk.Frame):
             type_selected = type_test.get()
 
             try:
+                ecart_moy=None
+
                 val_min = float(val_min_entry.get()) if val_min_entry.winfo_ismapped() and val_min_entry.get() else None
                 val_max = float(val_max_entry.get()) if val_max_entry.winfo_ismapped() and val_max_entry.get() else None
+                if type_selected=="ecart_moy_ratio" :
+                    ecart_moy = float(ecart_moy_ratio_entry.get()) if ecart_moy_ratio_entry.winfo_ismapped() and ecart_moy_ratio_entry.get() else None
+                elif type_selected=="ecart_moy" :
+                    ecart_moy = float(ecart_moy_entry.get()) if ecart_moy_entry.winfo_ismapped() and ecart_moy_entry.get() else None
+
             except ValueError:
                 messagebox.showerror("Erreur", "Veuillez entrer des valeurs numériques valides.")
                 return
@@ -979,16 +1267,20 @@ class ExcelTesterApp(tk.Frame):
                 return
 
             test = Test_gen(nom=nom, critere=[valeur])
-            self.tests.append((test, type_selected, val_min, val_max))
+            self.tests.append((test, type_selected, val_min, val_max,ecart_moy))
             self.test_listbox.insert(tk.END, f"[GEN] {nom} ({type_selected})")
             popup.destroy()
 
         # Bouton pour ajouter le test
-        tk.Button(popup, text="Ajouter le test", command=ajouter).grid(row=6, column=1, pady=10)
+        ttkb.Button(popup, text="Ajouter le test", command=ajouter).grid(row=6, column=1, pady=10)
 
     def popup_ajouter_test_spe(self):
         """Ouvre un popup pour ajouter un test spécifique."""
+        if self.taille_entete_entry.get() == "":
+                messagebox.showerror("Erreur", "Veuillez entrer la taille de l'en-tête.")
+                return 
         try:
+            
             dico = self.dico_entete()  # Assure que self.dico_structure est construit
         except Exception as e:
             messagebox.showerror("Erreur", "Fichier et taille d'entete requis.")
@@ -1000,35 +1292,37 @@ class ExcelTesterApp(tk.Frame):
         popup.title("Ajouter un test spécifique")
         popup.grab_set()
 
-        ligne  = 0
+        ligne  = 0# 0
 
         # Nom du test
         tk.Label(popup, text="Nom du test :").grid(row=ligne, column=0, sticky="w")
-        nom_entry = tk.Entry(popup, width=30)
+        nom_entry = tk.Entry(popup, width=25)
         nom_entry.grid(row=ligne, column=1)
 
-        ligne+=1
+        ligne+=1# 1
         # Type de test
         tk.Label(popup, text="Type de test :").grid(row=ligne, column=0, sticky="w")
-        type_test = ttk.Combobox(popup, values=["val_min", "val_max", "val_entre", "compare_fix", "compare_ratio"], state="readonly")
+        type_test = ttk.Combobox(popup, values=["val_min", "val_max", "val_entre","ecart_moy", "ecart_moy_ratio", "compare_fix", "compare_ratio"], state="readonly")
         type_test.grid(row=ligne, column=1)
         type_test.set("val_min")
 
-        ligne+=1
+        ligne+=1# 2
         label_col1 = tk.Label(popup, text="Colonne cible 1 :")
         label_col1.grid(row=ligne, column=0, sticky="w")
         colonne_cible_1_combo = Selection_col(dico)
         colonne_cible_1_combo.get_frame_selection_grid(popup,ligne,1)
 
-        ligne+= int(self.taille_entete_entry.get())
+        ligne+= int(self.taille_entete_entry.get())# 2 + x
 
         label_col2 = tk.Label(popup, text="Colonne cible 2 :")
         label_col2.grid(row=ligne, column=0, sticky="w")
+        print(ligne)
+
         colonne_cible_2_combo = Selection_col(dico)
         colonne_cible_2_combo.get_frame_selection_grid(popup,ligne,1)
+        colonne_cible_2_combo.grid()
 
-        
-        ligne+=int(self.taille_entete_entry.get())
+        ligne += int(self.taille_entete_entry.get())# 2 + 2x
 
 
         # Champs dynamiques selon le type de test
@@ -1045,18 +1339,24 @@ class ExcelTesterApp(tk.Frame):
         label_ratio = tk.Label(popup, text="Ratio attendu :")
         ratio_entry = tk.Entry(popup)
 
-        for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_diff, diff_entry, label_ratio, ratio_entry, label_col2]:
-            widget.grid_forget()
-        colonne_cible_2_combo.grid_remove()
+        label_ecart_moy = tk.Label(popup, text="Écart à la moyenne")
+        ecart_moy_entry = tk.Entry(popup)
 
-        def afficher_champs_selon_type(event=None,ligne=5):
-            for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_diff, diff_entry, label_ratio, ratio_entry,  label_col2]:
+        label_ecart_moy_ratio = tk.Label(popup, text="Écart à la moyenne (ratio)")
+        ecart_moy_ratio_entry = tk.Entry(popup)
+
+        for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_diff, diff_entry, label_ratio, ratio_entry,label_col2 ,label_ecart_moy_ratio, ecart_moy_ratio_entry, label_ecart_moy, ecart_moy_entry]:
+            widget.grid_forget()
+        # colonne_cible_2_combo.grid_remove()
+
+        def afficher_champs_selon_type(event=None,ligne=ligne):
+            for widget in [label_val_min, val_min_entry, label_val_max, val_max_entry, label_diff, diff_entry, label_ratio, ratio_entry,label_col2,label_ecart_moy_ratio, ecart_moy_ratio_entry, label_ecart_moy, ecart_moy_entry]:
                 widget.grid_forget()
             colonne_cible_2_combo.grid_remove()
 
+
             t = type_test.get()
             ligne_i = ligne
-            print(ligne_i)
             if t == "val_min":
                 label_val_min.grid(row=ligne_i, column=0, sticky="w")
                 val_min_entry.grid(row=ligne_i, column=1)
@@ -1068,30 +1368,40 @@ class ExcelTesterApp(tk.Frame):
             elif t == "val_entre":
                 label_val_min.grid(row=ligne_i, column=0, sticky="w")
                 val_min_entry.grid(row=ligne_i, column=1)
-                ligne_i += 1
+                ligne_i += 1# 3 + x
 
                 label_val_max.grid(row=ligne_i, column=0, sticky="w")
                 val_max_entry.grid(row=ligne_i, column=1)
+            elif t== "ecart_moy":
+                label_ecart_moy.grid(row=ligne, column=0, sticky="w")
+                ecart_moy_entry.grid(row=ligne, column=1)
+
+            
+            elif t== "ecart_moy_ratio":
+                label_ecart_moy_ratio.grid(row=ligne, column=0, sticky="w")
+                ecart_moy_ratio_entry.grid(row=ligne, column=1)
 
             elif t =="compare_fix"or t == "compare_ratio":
-                print(ligne_i)
-                label_col2.grid(row=ligne_i, column=0, sticky="w")
+                label_col2.grid(row=ligne-int(self.taille_entete_entry.get()), column=0, sticky="w")
+
                 colonne_cible_2_combo.grid()
-                ligne_i += int(self.taille_entete_entry.get())
 
                 # label_val_min.grid(row=ligne_i, column=0, sticky="w")
                 # val_min_entry.grid(row=ligne_i, column=1)
-                ligne_i +=1
+
 
                 if t == "compare_fix":
                     label_diff.grid(row=ligne_i, column=0, sticky="w")
                     diff_entry.grid(row=ligne_i, column=1)
-                    ligne_i +=1
+                    ligne_i +=1 # 3 + 2x
 
                 else:
+                    print(ligne_i)
+
                     label_ratio.grid(row=ligne_i, column=0, sticky="w")
                     ratio_entry.grid(row=ligne_i, column=1)
-                    ligne_i +=1
+                    ligne_i +=1 # 3 + 2x
+            
 
 
 
@@ -1106,14 +1416,23 @@ class ExcelTesterApp(tk.Frame):
             # Chemins complets des colonnes
             chemin_1 = colonne_cible_1_combo.chemin
             chemin_2 = colonne_cible_2_combo.chemin
-
+            print( chemin_2)
             try:
                 if type_selected == "val_min" or type_selected == "val_entre":
                     val1 = float(val_min_entry.get()) if val_min_entry.get() else None
+                if type_selected == "val_max" :
+                    val1 = float(val_max_entry.get()) if val_max_entry.get() else None
                 elif type_selected =="compare_fix":
                     val1 = float(diff_entry.get()) if diff_entry.get() else None
                 elif type_selected == "compare_ratio":
                     val1 = float(ratio_entry.get()) if ratio_entry.get() else None
+                elif type_selected == "ecart_moy_ratio":
+                    ecart_moy = float(ecart_moy_ratio_entry.get()) if ecart_moy_ratio_entry.winfo_ismapped() and ecart_moy_ratio_entry.get() else None
+                    val1 = ecart_moy
+                elif type_selected == "ecart_moy":
+                    ecart_moy = float(ecart_moy_entry.get()) if ecart_moy_entry.winfo_ismapped() and ecart_moy_entry.get() else None
+                    val1 = ecart_moy
+
                 val2 = float(val_max_entry.get()) if val_max_entry.get() else None
             except ValueError:
                 messagebox.showerror("Erreur", "Valeurs numériques invalides")
@@ -1127,13 +1446,16 @@ class ExcelTesterApp(tk.Frame):
             self.tests.append((test, type_selected, chemin_1, chemin_2, val1, val2))
             self.test_listbox.insert(tk.END, f"[SPE] {nom} ({type_selected})")
             popup.destroy()
-
-        tk.Button(popup, text="Ajouter le test", command=ajouter).grid(row=ligne + 6, column=1, pady=10)
+        print(ligne)
+        ttkb.Button(popup, text="Ajouter le test", command=ajouter).grid(row=ligne+7 , column=1, pady=10)
 
 # Exécuter les tests =========================================================================================================
 
     def executer_tests(self):
         """Exécute les tests sélectionnés sur le fichier Excel."""
+        if self.taille_entete_entry.get() == "":
+            messagebox.showerror("Erreur", "Veuillez entrer la taille de l'en-tête.")
+            return 
         if self.tests == []:
             messagebox.showwarning("Attention", "Aucun test sélectionné.")
             return
@@ -1153,18 +1475,18 @@ class ExcelTesterApp(tk.Frame):
             return
 
         fichier = Fichier(self.fichier_path)
-        feuille = Feuille(fichier, self.feuille_nom.get(),
+        self.feuille = Feuille(fichier, self.feuille_nom.get(),
                           self.details_structure["data_debut"],
                           self.details_structure["data_fin"],)
-        entete = Entete(feuille,self.details_structure["entete_debut"],
+        entete = Entete(self.feuille,self.details_structure["entete_debut"],
                         self.details_structure["entete_fin"],
                         self.details_structure["nb_colonnes_secondaires"],
                         self.details_structure["ligne_unite"],
                         self.dico_structure
                         )
-        feuille.entete = entete
+        self.feuille.entete = entete
         # print(feuille.entete.structure)
-        feuille.clear_all_cell_colors()
+        self.feuille.clear_all_cell_colors()
 
 
         for item in self.erreur_table.get_children():
@@ -1173,15 +1495,19 @@ class ExcelTesterApp(tk.Frame):
         for test in self.tests:
             message = ""
             if isinstance(test[0], Test_gen):
-                obj, type_test, val_min, val_max = test
+                obj, type_test, val_min, val_max,ecart_moy  = test
                 self.append_text(f"--- {obj.nom} ({type_test}) ---")
                 try:
                     if type_test == "val_min":
-                        message = obj.val_min(feuille, val_min)
+                        message = obj.val_min(self.feuille, val_min)
                     elif type_test == "val_max":
-                        message = obj.val_max(feuille, val_max)
+                        message = obj.val_max(self.feuille, val_max)
                     elif type_test == "val_entre":
-                        message = obj.val_entre(feuille, val_min, val_max)
+                        message = obj.val_entre(self.feuille, val_min, val_max)
+                    elif type_test == "ecart_moy":
+                        message = obj.ecart_moy(self.feuille, ecart_moy)
+                    elif type_test == "ecart_moy_ratio":
+                        message = obj.ecart_moy_ratio(self.feuille, ecart_moy)
                     
                     self.append_text(str(message))
 
@@ -1194,12 +1520,11 @@ class ExcelTesterApp(tk.Frame):
             elif isinstance(test[0], Test_spe):
                 # ⬇️ décomposition étendue avec les nouvelles cases à cocher
                 obj, type_test, col1, col2, val1, val2 = test
-                obj.feuille = feuille  # mise à jour de la feuille
+                obj.feuille = self.feuille  # mise à jour de la feuille
             
                 self.append_text(f"--- {obj.nom} ({type_test}) ---")
                 
                 try:
-            
                     # ⬇️ Appel normal
                     if type_test == "val_min":
                         message = obj.val_min(val1, col1)
@@ -1211,7 +1536,11 @@ class ExcelTesterApp(tk.Frame):
                         message = obj.compare_col_fix(val1, col1, col2)
                     elif type_test == "compare_ratio":
                         message = obj.compare_col_ratio(val1, col1, col2)
-            
+                    elif type_test == "ecart_moy":
+                        message = obj.ecart_moy( val1,col1)
+                    elif type_test == "ecart_moy_ratio":
+                        message = obj.ecart_moy_ratio( val1,col1)
+
                     self.append_text(str(message))
             
                 except Exception as e:
@@ -1220,11 +1549,8 @@ class ExcelTesterApp(tk.Frame):
 
 
             self.append_text(f"--- FIN TESTS ---\n")
-        feuille.error_all_cell_colors()
-        for row_idx, ligne in enumerate(feuille.erreurs):
-            for col_idx, code in enumerate(ligne):
-                if code > 0:
-                    self.erreur_table.insert("", "end", values=(row_idx + 1, col_idx + 1, feuille.df.iloc[row_idx, col_idx]))
+        self.afficher_erreurs()
+                   
 
 
 

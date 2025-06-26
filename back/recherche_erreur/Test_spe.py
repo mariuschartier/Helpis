@@ -16,15 +16,6 @@ class Test_spe:
 
 
 
-
-
-
-
-
-    
-
-
-
     def val_max(self, val_max: float, colonne: str):
         """
         Vérifie que les valeurs sont <= val_max"""
@@ -56,12 +47,36 @@ class Test_spe:
 
         )
     
+    
+    def ecart_moy(self, ecart_moy: float,colonne: str):
+        """
+        Vérifie que les valeurs sont  val_min <= x <= val_max"""
+        # Vérifie que les valeurs sont entre val_min et val_max
+        return self.valider_colonne(
+            colonne=colonne,
+            condition=lambda x,moy: (abs(moy - x) <= ecart_moy ) ,
+            message=f"Écart à la moyenne inferieur ou egal à la ecart_moy : {ecart_moy}",
+            erreur_message=f"Écart à la moyenne superieur à la ecart_moy : {ecart_moy}",
+            type_test= "ecart_moy"
+        )
+    def ecart_moy_ratio(self, ecart_moy: float,colonne: str):
+        """
+        Vérifie que les valeurs sont  val_min <= x <= val_max"""
+        # Vérifie que les valeurs sont entre val_min et val_max
+        return self.valider_colonne(
+            colonne=colonne,
+            condition=lambda x,moy: (abs(moy - x) <= abs(moy/ecart_moy*100) ) if moy !=0 else 0 ,
+            message=f"Écart à la moyenne inferieur ou egal à la ecart_moy : {ecart_moy}",
+            erreur_message=f"Écart à la moyenne superieur à la ecart_moy : {ecart_moy}",
+            type_test= "ecart_moy"
+        )
+    
     def compare_col_fix(self, difference: float, colonne1: str,colonne2: str):
         """Compare deux colonnes pour vérifier si la différence absolue est supérieure à une valeur fixe."""
         return self.valider_comparaison(
             colonne1=colonne1,
             colonne2=colonne2,
-            condition=lambda x,y: abs(x-y) > difference,
+            condition=lambda x,y: abs(x-y) < difference,
             message=f"Difference < {difference} entre {colonne1} et {colonne2}",
             erreur_message=f"Difference > {difference} entre {colonne1} et {colonne2}",
         )
@@ -72,13 +87,13 @@ class Test_spe:
         return self.valider_comparaison(
             colonne1=colonne1,
             colonne2=colonne2,
-            condition=lambda x,y: abs(x-y) > y*ratio,
+            condition=lambda x,y: abs(x-y) < y*ratio,
             message=f"Difference < {ratio} entre {colonne1} et {colonne2}",
             erreur_message=f"Difference > {ratio} entre {colonne1} et {colonne2}",
         )
     
 
-    def valider_colonne(self, colonne: str, condition, message: str, erreur_message: str):
+    def valider_colonne(self, colonne: str, condition, message: str, erreur_message: str,type_test =None):
         """
         Valide une colonne d'une feuille selon un critère donné."""
         erreurs = {}
@@ -100,16 +115,24 @@ class Test_spe:
             raise ValueError(msg_tmp)
 
         ligne_data = self.feuille.debut_data
+        ligne_fin= self.feuille.fin_data
         print(ligne_data)
         entete_2 = str(df.iloc[1, indices_colonnes])
-        valeurs = pd.to_numeric(df.loc[ligne_data:, indices_colonnes], errors='coerce')
+        
+        valeurs = pd.to_numeric(df.loc[ligne_data:ligne_fin, indices_colonnes], errors='coerce')
 
         # Vérification et conversion en série si nécessaire
         if isinstance(valeurs, (int, float)):
             valeurs = pd.Series([valeurs])
 
-        masque = condition(valeurs)
-        valeurs_invalides = valeurs[~masque]
+        moyenne = pd.to_numeric(df.loc[ligne_data:ligne_fin,indices_colonnes], errors='coerce').mean()
+        # print(df)
+        print(moyenne)
+        if type_test == "ecart_moy":
+            masques_valides = condition(valeurs,moyenne)
+        else:
+            masques_valides = condition(valeurs)
+        valeurs_invalides = valeurs[~masques_valides]
         self.feuille.ajouts_erreur(valeurs_invalides.index, indices_colonnes)
 
         col_key = f"{colonne} ({entete_2})"
@@ -175,11 +198,12 @@ class Test_spe:
             raise ValueError(msg_tmp)
 
         ligne_data = self.feuille.debut_data
+        ligne_fin= self.feuille.fin_data
         entete_1 = str(df.iloc[1, indices_colonne1])
         entete_2 = str(df.iloc[1, indices_colonne2])
 
-        valeurs1 = pd.to_numeric(df.loc[ligne_data:, indices_colonne1], errors='coerce')
-        valeurs2 = pd.to_numeric(df.loc[ligne_data:, indices_colonne2], errors='coerce')
+        valeurs1 = pd.to_numeric(df.loc[ligne_data:ligne_fin, indices_colonne1], errors='coerce')
+        valeurs2 = pd.to_numeric(df.loc[ligne_data:ligne_fin, indices_colonne2], errors='coerce')
 
         # Vérification et conversion en série si nécessaire
         if isinstance(valeurs1, (int, float)) and isinstance(valeurs2, (int, float)):
@@ -187,6 +211,9 @@ class Test_spe:
             valeurs2 = pd.Series([valeurs2])
 
         masque = condition(valeurs1, valeurs2)
+        # print(f"valeur 1 :{valeurs1}  valeur 2 : {valeurs2}")
+        # print(f"difference :{valeurs1 - valeurs2}  ")
+
         valeurs_invalides1 = valeurs1[~masque]
         valeurs_invalides2 = valeurs2[~masque]
 
@@ -222,7 +249,7 @@ class Test_spe:
                 msg_tmp = f"- Colonne '{col}' : {len(err)} valeurs hors plage.\n"
                 message_final += msg_tmp
 
-                print(msg_tmp)
+            print(msg_tmp)
         print("======================================================================================= \n")
         return message_final
     

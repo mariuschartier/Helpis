@@ -48,25 +48,55 @@ class Test_gen:
             erreur_message=f"valeurs hors de [{val_min}, {val_max}]"
         )
 
+
+    def ecart_moy(self, feuille: Feuille, ecart_moy: float):
+        """
+        Vérifie que les valeurs sont  à distance x de la moyenne"""
+        # Vérifie que les valeurs sont entre val_min et val_max
+        return self.valider_colonnes(
+            feuille,
+            condition=lambda x,moy: (abs(moy - x) <= ecart_moy ) ,
+            message=f"Écart à la moyenne inferieur ou egal à la ecart_moy : {ecart_moy}",
+            erreur_message=f"Écart à la moyenne superieur à la ecart_moy : {ecart_moy}",
+            type_test= "ecart_moy"
+        )
+
+    def ecart_moy_ratio(self, feuille: Feuille, ecart_moy: float):
+        """
+        Vérifie que les valeurs sont  à distance x% de la moyenne"""
+        # Vérifie que les valeurs sont entre val_min et val_max
+        return self.valider_colonnes(
+            feuille,
+            condition=lambda x,moy: (abs(moy - x) <= abs(moy/ecart_moy*100) ) if moy !=0 else 0 ,
+            message=f"Écart à la moyenne inferieur ou egal à la ecart_moy : {ecart_moy}%",
+            erreur_message=f"Écart à la moyenne superieur à la ecart_moy : {ecart_moy}%",
+            type_test= "ecart_moy"
+        )
+
+
+
+
     def valider_colonnes(
         self,
         feuille: Feuille,
         condition: Callable[[pd.Series], pd.Series],
         message: str,                  # ce message sert à donner un contexte "valeurs entre", etc.
-        erreur_message: str):
+        erreur_message: str,
+        type_test = None ):
         """
         Valide les colonnes d'une feuille selon un critère donné."""
         erreurs = {}
         df = feuille.get_feuille()
         ligne_symbole = feuille.entete.ligne_unite
         ligne_data = feuille.debut_data
+        ligne_fin = feuille.fin_data
         colonne_symbole = []
+
         for cle in feuille.entete.placement_colonne:
             for  crit in self.critere:
                 if crit in cle:
                     colonne_symbole.append(feuille.entete.placement_colonne[cle])
 
-        print(ligne_data)
         message_final = ""  
         
         if colonne_symbole == []:   
@@ -74,19 +104,24 @@ class Test_gen:
             message_final = f"Le critère '{self.critere}' n'existe pas dans le DataFrame.\n"
             return message_final
                 
-        print(ligne_data)
         message_final = ""  
     
         for col in df.columns:
             nom_col = str(df.loc[ligne_symbole, col])
+            
             if  col  in colonne_symbole:
 
                 msg_tmp = f"📊 Colonne '{col+1}' détectée comme {nom_col} ({self.critere}).\n"
                 print(msg_tmp)
                 # message_final += msg_tmp
                 
-                valeurs = pd.to_numeric(df[col].iloc[ligne_data:], errors='coerce')
-                masques_valides = condition(valeurs)
+                valeurs = pd.to_numeric(df[col].iloc[ligne_data:ligne_fin], errors='coerce')
+                moyenne = pd.to_numeric(df[col].iloc[ligne_data:ligne_fin], errors='coerce').mean()
+                print(moyenne)
+                if type_test == "ecart_moy":
+                    masques_valides = condition(valeurs,moyenne)
+                else:
+                    masques_valides = condition(valeurs)
                 valeurs_invalides = valeurs[~masques_valides]
     
                 if not valeurs_invalides.empty:

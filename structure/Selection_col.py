@@ -13,12 +13,18 @@ class Selection_col:
         self.chemin = ""
         self.widgets = []  # pour suivre tous les widgets utilisés (combo inclus)
         self.action_selection = None
+        self.comboboxes = []
 
 
     def maj_donnees(self, structure_entete):
         """Met à jour la structure d'entête avec une nouvelle structure."""
         self.structure_entete = structure_entete
         self.colonne_combo['values'] = list(self.structure_entete.keys())
+        for combo, _ in self.comboboxes:
+            combo.destroy()
+        self.comboboxes.clear()
+        # self.chemin = ""
+
         # print(self.structure_entete)
 
     
@@ -38,23 +44,23 @@ class Selection_col:
         self.colonne_combo.grid(row=start_row, column=start_col, padx=5, pady=5, sticky="w")
         self.widgets.append(self.colonne_combo)
 
-        comboboxes = []
+        self.comboboxes = []
 
         def add_combobox_grid(level, structure):
             combo = ttk.Combobox(parent_frame, state="readonly")
             combo.grid(row=start_row + level + 1, column=start_col, padx=5, pady=2, sticky="w")
             combo["values"] = list(structure.keys())
-            comboboxes.append((combo, structure))
+            self.comboboxes.append((combo, structure))
             self.widgets.append(combo)
 
             def on_selection(event=None):
-                while len(comboboxes) > level + 1:
-                    widget, _ = comboboxes.pop()
+                while len(self.comboboxes) > level + 1:
+                    widget, _ = self.comboboxes.pop()
                     widget.destroy()
 
                 selection = combo.get()
                 if selection in structure and isinstance(structure[selection], dict) and structure[selection] and structure[selection] != {} :
-                    print(f"Ajout de la combobox pour {selection}")
+                    # print(f"Ajout de la combobox pour {selection}")
                     add_combobox_grid(level + 1, structure[selection])
 
                 self.chemin = get_path()
@@ -63,25 +69,26 @@ class Selection_col:
 
         def on_colonne_selection(event=None):
 
-            for combo, _ in comboboxes:
+            for combo, _ in self.comboboxes:
                 combo.destroy()
-            comboboxes.clear()
+            self.comboboxes.clear()
 
             selected_col = self.colonne_combo.get()
             if selected_col in self.structure_entete and self.structure_entete[selected_col] != {}:
                 add_combobox_grid(0, self.structure_entete[selected_col])
-            self.colonne_actuelle = get_path()
             self.chemin = get_path()
         self.colonne_combo.bind("<<ComboboxSelected>>", on_colonne_selection)
 
         def get_path():
             col1 = self.colonne_combo.get()
-            selection = [combo.get() for combo, _ in comboboxes if combo.get()]
-            chemin = " > ".join([col1] + selection) if col1 else None
-
+            selection = [combo.get() for combo, _ in self.comboboxes if combo.get()]
+            self.chemin = " > ".join([col1] + selection) if col1 else None
+            
+            # print(self.structure_entete)
             if self.action_selection:
                 self.action_selection()
-            return chemin
+
+            return self.chemin
 
         return get_path
 
@@ -102,18 +109,18 @@ class Selection_col:
         self.colonne_combo.pack(padx=5, pady=5, anchor="w")
         self.widgets.append(self.colonne_combo)
 
-        comboboxes = []
+        self.comboboxes = []
 
         def add_combobox_pack(structure):
             combo = ttk.Combobox(parent_frame, state="readonly")
             combo.pack(padx=5, pady=2, anchor="w")
             combo["values"] = list(structure.keys())
-            comboboxes.append((combo, structure))
+            self.comboboxes.append((combo, structure))
             self.widgets.append(combo)
 
             def on_selection(event=None):
-                while len(comboboxes) > comboboxes.index((combo, structure)) + 1:
-                    widget, _ = comboboxes.pop()
+                while len(self.comboboxes) > self.comboboxes.index((combo, structure)) + 1:
+                    widget, _ = self.comboboxes.pop()
                     widget.destroy()
 
                 selection = combo.get()
@@ -125,9 +132,9 @@ class Selection_col:
             combo.bind("<<ComboboxSelected>>", on_selection)
 
         def on_colonne_selection(event=None):
-            for combo, _ in comboboxes:
+            for combo, _ in self.comboboxes:
                 combo.destroy()
-            comboboxes.clear()
+            self.comboboxes.clear()
 
             selected_col = self.colonne_combo.get()
             if selected_col in self.structure_entete and self.structure_entete[selected_col]:
@@ -138,8 +145,10 @@ class Selection_col:
 
         def get_path():
             col1 = self.colonne_combo.get()
-            selection = [combo.get() for combo, _ in comboboxes if combo.get()]
+            selection = [combo.get() for combo, _ in self.comboboxes if combo.get()]
             self.chemin = " > ".join([col1] + selection) if col1 else None
+            if self.action_selection:
+                self.action_selection()
             return self.chemin
 
         return get_path
@@ -166,3 +175,5 @@ class Selection_col:
         """ Retire tous les widgets de la sélection du pack."""
         for widget in self.widgets:
             widget.pack_forget()
+
+

@@ -1,4 +1,4 @@
-import imports
+# import imports as imp
 from structure.Fichier import Fichier
 from structure.Feuille import Feuille
 import fonctions as fn
@@ -9,6 +9,8 @@ from front import multi_page as mp
 import sys
 
 def main():
+    
+
     """Point d'entrée principal de l'application."""
     print("Bienvenue dans mon projet Python 🚀")
     
@@ -16,6 +18,7 @@ def main():
 
 if __name__ == "__main__":
     try:
+        # imp.import_bibli()          
         main()
         
         app = mp.MultiPageApp()

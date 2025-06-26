@@ -48,7 +48,7 @@ class ComparateurFichiers:
         return pd.concat(datas, ignore_index=True)
 
 
-    def tester_normalite(self, colonne, methode="shapiro", seuil=0.05):
+    def tester_normalite(self, colonne, methode="Shapiro", seuil=0.05):
         """Teste la normalité des valeurs d'une colonne avec la méthode choisie."""
         try:
             serie = pd.to_numeric(self.collecter_donnees(colonne), errors='coerce').dropna()
@@ -56,15 +56,15 @@ class ComparateurFichiers:
             if len(serie) < 3:
                 return {"stat": None, "p_value": None, "normal": False}
 
-            if methode == "shapiro":
+            if methode == "Shapiro":
                 stat, p = shapiro(serie)
                 return {"stat": stat, "p_value": p, "normal": p > seuil}
 
-            elif methode == "dagostino":
+            elif methode == "Dagostino":
                 stat, p = normaltest(serie)
                 return {"stat": stat, "p_value": p, "normal": p > seuil}
 
-            elif methode == "anderson":
+            elif methode == "Anderson":
                 result = anderson(serie)
                 stat = result.statistic
                 seuils = result.critical_values
@@ -81,7 +81,7 @@ class ComparateurFichiers:
             return {"stat": None, "p_value": None, "normal": False}
 
 
-    def tester_homogeneite_variances(self, variable: str, groupe: str, methode="levene", seuil=0.05):
+    def tester_homogeneite_variances(self, variable: str, groupe: str, methode="Levene", seuil=0.05):
         """
         Teste l'homogénéité des variances pour une variable en fonction des groupes.
         - variable: nom complet de la colonne de la variable (chemin)
@@ -103,9 +103,9 @@ class ComparateurFichiers:
                 resultats = {"stat": None, "p_value": None, "homogene": False}
             else:
                 echantillons = [data[data[groupe] == g][variable] for g in groupes_uniques]
-                if methode == "levene":
+                if methode == "Levene":
                     stat, p = levene(*echantillons)
-                elif methode == "bartlett":
+                elif methode == "Bartlett":
                     stat, p = bartlett(*echantillons)
                 else:
                     raise ValueError("Méthode inconnue : choisir 'levene' ou 'bartlett'")
@@ -119,7 +119,7 @@ class ComparateurFichiers:
         return resultats
 
 
-    def tester_comparaison_groupes(self, variable, groupe, groupe_1: str, groupe_2: str, methode="student", seuil=0.05):
+    def tester_comparaison_groupes(self, variable, groupe, groupe_1: str, groupe_2: str, methode="Student", seuil=0.05):
         """
         Compare une variable entre deux groupes avec un test statistique.
         - variable: nom complet de la colonne contenant les valeurs numériques
@@ -159,9 +159,9 @@ class ComparateurFichiers:
                 }
 
             # 🧪 Test statistique
-            if methode == "student":
+            if methode == "Student":
                 stat, p = ttest_ind(g1, g2, equal_var=True)
-            elif methode == "mannwhitney":
+            elif methode == "Mannwhitney":
                 stat, p = mannwhitneyu(g1, g2)
             else:
                 raise ValueError("Méthode non reconnue : choisir 'student' ou 'mannwhitney'.")
@@ -186,7 +186,7 @@ class ComparateurFichiers:
 
 
 
-    def tester_comparaison_moyennes_hebdo(self, variable, groupe, groupe_1, groupe_2, methode="student", seuil=0.05):
+    def tester_comparaison_moyennes_hebdo(self, variable, groupe, groupe_1, groupe_2, methode="Student", seuil=0.05):
         """
         Compare les moyennes hebdomadaires d'une variable entre deux groupes.
         """
@@ -224,9 +224,9 @@ class ComparateurFichiers:
                 }
 
             # Application du test
-            if methode == "student":
+            if methode == "Student":
                 stat, p = ttest_ind(g1, g2, equal_var=True)
-            elif methode == "mannwhitney":
+            elif methode == "Mannwhitney":
                 stat, p = mannwhitneyu(g1, g2)
             else:
                 raise ValueError("Méthode inconnue : choisir 'student' ou 'mannwhitney'")
@@ -241,5 +241,35 @@ class ComparateurFichiers:
 
         except Exception as e:
             resultats = {"stat": None, "p_value": None, "significatif": False, "error": str(e)}
+
+        return resultats
+
+
+    def tester_autre(self,colonne,methode="Moyenne"):
+        """
+        Effectue un test statistique sur une colonne spécifique.
+        - colonne: nom complet de la colonne (chemin)
+        - methode: méthode de test à appliquer (par exemple, "Moyenne")
+        """
+        try:
+            serie = pd.to_numeric(self.collecter_donnees(colonne), errors='coerce').dropna()
+            resultats = {"error": None}
+            if methode == "Moyenne":
+                resultats["Moyenne"] = round(serie.mean(),2)
+
+            elif methode == "Mediane":
+                resultats["Mediane"] = round(serie.median(),2)
+            
+            elif methode == "Variance":
+                resultats["Variance"] = round(serie.var(),2)
+            elif methode == "Ecart-type":
+                resultats["Ecart-type"] = round(serie.std(),2)
+
+            else:
+                raise ValueError("Méthode inconnue : choisir 'Moyenne' ou 'Mediane'")
+
+        except Exception as e:
+            print(f"Erreur dans tester_autre: {e}")
+            resultats["error"]= str(e)
 
         return resultats

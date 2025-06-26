@@ -1,5 +1,7 @@
 from tkinter import filedialog, messagebox, ttk,simpledialog
 import tkinter as tk
+import ttkbootstrap as ttkb
+from ttkbootstrap.constants import *
 import pandas as pd
 
 
@@ -13,11 +15,11 @@ from structure.Fichier import Fichier
 from structure.Selection_col import Selection_col
 
 from back.tests_statistiques.ComparateurFichiers import ComparateurFichiers
-from back.tests_statistiques.courbes import plot_histogram_normal,plot_qqplot
+from back.tests_statistiques.courbes import plot_histogram_normal,plot_qqplot, plot_boxplot
 from fonctions import to_int
 
 
-class ComparePage(tk.Frame):
+class ComparePage(ttkb.Frame):
     """ Page de comparaison de fichiers Excel pour effectuer des tests statistiques.
     Cette page permet de charger un fichier Excel, d'afficher un aperçu de son contenu,
     de sélectionner des tests statistiques et d'afficher les résultats.
@@ -28,7 +30,7 @@ class ComparePage(tk.Frame):
             parent (tk.Frame): Le parent de cette page.
             controller (Controller): Le contrôleur de l'application.
         """
-        super().__init__(parent, bg="#f4f4f4")
+        super().__init__(parent)
         self.controller = controller
         self.comparateur = ComparateurFichiers()
         self.feuille_nom = tk.StringVar()
@@ -49,52 +51,95 @@ class ComparePage(tk.Frame):
         self.fonctions_courbes = [
         ("Normalité", self.tracer_courbe_normal),
         ("Q-Q plot", self.tracer_courbe_QQpolt),
+        ("Boite à chat",self.plot_boxplot)
         ]
         self.colonne_actuelle  = ""
 
         self.create_file_frame()
 
         self.create_excel_preview_frame()
-        self.test_frame = tk.LabelFrame(self, text="3. Sélection et exécution de tests statistiques", bg="#f4f4f4")
+        self.test_frame = ttkb.LabelFrame(self, text="3. Sélection et exécution de tests statistiques")
         self.test_frame.pack(fill="x", padx=10, pady=5)
         self.create_result_box()
         self.create_result_tag()
         self.create_test_selector()
 
+        self.desactivation_bouton()
+
 
 # frame de test ==========================================================
 # Champ de chargement du fichier et de l'entete
+    
     def create_file_frame(self):
-        """ Crée le cadre pour le chargement du fichier Excel et la sélection de l'en-tête.
-        """
-        self.file_frame = tk.LabelFrame(self, text="1. Charger un fichier Excel", bg="#f4f4f4")
-        self.file_frame.pack(fill="x", padx=10, pady=5)
+        """Crée le cadre pour charger le fichier Excel et configurer l'en-tête avec wrapping dynamique et taille minimale."""
+        self.file_frame = ttkb.LabelFrame(self, text="1. Charger un fichier Excel")
+        self.file_frame.pack(fill="x", expand=False, padx=10, pady=5)
 
-        self.fichier_entry = tk.Entry(self.file_frame, width=80)
-        self.fichier_entry.pack(side="left", padx=5, pady=5)
-
-        tk.Button(self.file_frame, text="Parcourir", command=self.choisir_fichier).pack(side="left", padx=5)
-
-        self.feuille_combo = ttk.Combobox(self.file_frame, textvariable=self.feuille_nom, state="readonly")
-        self.feuille_combo.pack(side="left", padx=5)
-        self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.afficher_excel())
-
-
-        # Choix de la taille de l'en-tête
         self.taille_entete_var = tk.StringVar()
-        tk.Label(self.file_frame, text="Taille de l'en-tête :").pack(side="left", padx=(10, 0))
-        self.taille_entete_entry = tk.Entry(self.file_frame, width=5,textvariable=self.taille_entete_var )
-        self.taille_entete_var.set(1)  # Met à jour l'Entry avec 1
+        self.taille_entete_var.set("1")
+        self.widgets_file_frame = []
+
+        # Widgets à placer dynamiquement
+        self.fichier_entry = tk.Entry(self.file_frame, width=60)
+        self.widgets_file_frame.append(self.fichier_entry)
+
+        parcourir_btn = ttkb.Button(self.file_frame, text="Parcourir", command=self.controller.bind_button(self.choisir_fichier), width=15)
+        self.widgets_file_frame.append(parcourir_btn)
+
+        self.feuille_combo = ttk.Combobox(self.file_frame, textvariable=self.feuille_nom, state="readonly", width=20)
+        self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.afficher_excel())
+        self.feuille_combo.bind("<<ComboboxSelected>>", lambda e: self.on_feuille_change())
+
+        self.widgets_file_frame.append(self.feuille_combo)
+
+        # Création d'un sous-frame pour aligner label_entete et taille_entete_entry
+        entete_frame = tk.Frame(self.file_frame, bg="#f4f4f4")
+        label_entete = tk.Label(entete_frame, text="Taille de l'en-tête :")
+        label_entete.pack(side="left")
+
+        self.taille_entete_entry = tk.Entry(entete_frame, width=5, textvariable=self.taille_entete_var)
         self.taille_entete_var.trace_add("write", self.on_taille_entete_change)
-
-        self.taille_entete_entry.pack(side="left", padx=5)
-        tk.Button(self.file_frame, text="❓ Aide", command=self.ouvrir_aide).pack(side="right", padx=5)
         self.taille_entete_entry.bind("<KeyRelease>", self.on_key_release_int)
- 
-        tk.Button(self.file_frame, text="detail", command=self.ouvrir_popup_manipulation).pack(side="right", padx=5)
+        self.taille_entete_entry.pack(side="left", padx=5)
 
-        # tk.Button(self.file_frame, text="Ajouter au comparateur", command=self.ajouter_feuille).pack(side="left", padx=10)
-      
+        self.widgets_file_frame.append(entete_frame)
+
+
+        self.detail_btn = ttkb.Button(self.file_frame, text="detail", command=self.ouvrir_popup_manipulation, width=10)
+        self.widgets_file_frame.append(self.detail_btn)
+
+        aide_btn = ttkb.Button(self.file_frame, text="❓ Aide", command=self.ouvrir_aide, width=10)
+        self.widgets_file_frame.append(aide_btn)
+
+
+
+        self.file_frame.bind("<Configure>", lambda event: self.arrange_widgets_file_frame(self.file_frame, self.widgets_file_frame))
+
+        return self.file_frame
+
+    def arrange_widgets_file_frame(self, container, widgets):
+        """ Organise les widgets dans le cadre de fichier en utilisant une grille dynamique.
+        """
+        container.update_idletasks()
+        width = container.winfo_width()
+        widget_width = 150  # largeur minimale estimée par widget
+        num_columns = max(1, width // widget_width)
+        # print(f"width = {width}")
+        # print(f"widget_width = {widget_width}")
+        # print(f"nb_colonne = {num_columns}")
+
+
+        for widget in container.winfo_children():
+            widget.grid_forget()
+
+        for index, widget in enumerate(widgets):
+            row = index // num_columns
+            col = index % num_columns
+            widget.grid(row=row, column=col, padx=5, pady=5, sticky="ew")
+
+        for col in range(num_columns):
+            container.grid_columnconfigure(col, weight=1, minsize=widget_width)
+
     def on_taille_entete_change(self, *args):
         """
         Met à jour la fin de l'en-tête 
@@ -109,13 +154,43 @@ class ComparePage(tk.Frame):
         self.details_structure["data_debut"] = self.details_structure["entete_fin"]+1
 
         self.enlever_toutes_couleurs()
+        # self.colorier_ligne(self.details_structure["ligne_unite"],"#3CFF00")
+
         self.colorier_lignes_range(
             self.details_structure["entete_debut"],
             self.details_structure["entete_fin"])
+        print(self.details_structure["ligne_unite"])
+        # self.colorier_ligne(self.details_structure["ligne_unite"],"#3CFF00")
 
         self.dico_entete()
+        # print(self.dico_entete())
 
+    def on_feuille_change(self, event=None):
+        """ Gère le changement de feuille dans le menu déroulant.
+        """
+        self.hide_conditional_fields()
+        self.feuille_nom.set(self.feuille_combo.get())
+        self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None).copy()
 
+        # print(f"Feuille changée : {self.feuille_nom.get()}")
+        # print(f"DataFrame shape : {self.df.shape}")
+        self.taille_entete_entry.delete(0, tk.END)
+        self.taille_entete_entry.insert(0, str(1))
+        self.details_structure = {
+            "entete_debut": 0,
+            "entete_fin": 0,
+            "data_debut": 1,
+            "data_fin": self.df.shape[0] if self.df is not None else None,
+            "nb_colonnes_secondaires": 0,
+            "ligne_unite": 0,
+            "ignorer_vide": True
+        }
+        self.maj_feuille()
+        self.afficher_excel()
+        self.reset_combo()
+        
+        self.desactivation_bouton_choix_colonne()
+        
     def choisir_fichier(self):
         """ Ouvre une boîte de dialogue pour sélectionner un fichier Excel et charge la feuille sélectionnée.
         """
@@ -132,11 +207,13 @@ class ComparePage(tk.Frame):
         self.fichier_entry.insert(0, path)
 
         try:
-            xls = pd.ExcelFile(path)
-            self.feuille_combo["values"] = xls.sheet_names
+            with pd.ExcelFile(path) as xls:
+                self.feuille_combo['values'] = xls.sheet_names    
             self.feuille_combo.set(xls.sheet_names[0])
             self.ajouter_feuille()
             self.afficher_excel()
+            self.activation_bouton_choix_fichier()
+            self.on_feuille_change()
         except Exception as e:
             messagebox.showerror("Erreur", f"Erreur de lecture du fichier : {e}")
                
@@ -155,7 +232,6 @@ class ComparePage(tk.Frame):
                         nb_colonnes_secondaires=self.details_structure["nb_colonnes_secondaires"],
                         ligne_unite=self.details_structure["ligne_unite"],
                         structure=self.dico_structure)
-
         
     def ajouter_feuille(self):
         """ Ajoute la feuille sélectionnée au comparateur."""
@@ -176,7 +252,7 @@ class ComparePage(tk.Frame):
                             )
             feuille.entete = entete
             self.comparateur.ajouter_feuille(feuille)
-            messagebox.showinfo("Ajout réussi", f"La feuille a été ajoutée au comparateur.")
+            # messagebox.showinfo("Ajout réussi", f"La feuille a été ajoutée au comparateur.")
         except Exception as e:
             messagebox.showerror("Erreur", f"Impossible d'ajouter la feuille : {e}")
     
@@ -217,62 +293,73 @@ class ComparePage(tk.Frame):
     # Ouvrir le popup de manipulation de l'entete detaillée
     def ouvrir_popup_manipulation(self):
         """Ouvre un popup pour configurer les paramètres avancés de la feuille."""
-        if self.df is None:            
-            messagebox.showerror("Erreur", "Un fichier doit etre selectionné.")
+
+        # print("details_structure :")
+        # print(self.details_structure)
+
+        if self.df is None:
+            messagebox.showerror("Erreur", "Un fichier doit être sélectionné.")
             return
+
         popup = tk.Toplevel(self)
         popup.title("Paramètres avancés de la feuille")
-        popup.configure(bg="#f4f4f4")
+        popup.configure(bg="#ffffff")
         popup.grab_set()
 
         tk.Label(popup, text="Paramètres de lecture du fichier", font=("Segoe UI", 11, "bold"), bg="#f4f4f4").pack(pady=10)
-    
+
         champs = [
             ("Début de l'en-tête :", "entete_debut"),
             ("Fin de l'en-tête :", "entete_fin"),
             ("Début des données :", "data_debut"),
             ("Fin des données :", "data_fin"),
             ("Colonnes secondaires :", "nb_colonnes_secondaires"),
-            ("Ligne des unités :", "ligne_unite"),  # 🆕 Champ ajouté
+            ("Ligne des unités :", "ligne_unite"),
         ]
-    
+
         entries = {}
-        valeurs_par_defaut = self.details_structure if hasattr(self, "details_structure") else {}
-    
+        valeurs_par_defaut = {
+            "entete_debut": 0,
+            "entete_fin": 0,
+            "data_debut": 1,
+            "data_fin": self.df.shape[0],
+            "nb_colonnes_secondaires": 0,
+            "ligne_unite": 0,
+            "ignorer_vide": True
+        }
+        data  = self.details_structure if hasattr(self, "details_structure") else valeurs_par_defaut
+        
+
         for label, key in champs:
             frame = tk.Frame(popup, bg="#f4f4f4")
             frame.pack(fill="x", padx=10, pady=2)
             tk.Label(frame, text=label, width=25, anchor="w", bg="#f4f4f4").pack(side="left")
-        
+
             vcmd = (self.register(lambda val: val.isdigit() or val == ""), '%P')
             entry = tk.Entry(frame, validate="key", validatecommand=vcmd)
             entry.pack(side="left", fill="x", expand=True)
-            valeur_defaut = valeurs_par_defaut.get(key, "")
-            if key == "data_fin":
+
+            if key == "data_fin" and data["data_fin"] is None:
                 try:
-                    valeur_defaut = str(self.df.shape[0])  # Nombre de lignes du DataFrame
+                    valeur_defaut = str(self.df.shape[0])
                 except AttributeError:
-                    messagebox.showwarning("Attention", "La feuille de données n'existe pas. La valeur de 'Fin des données' ne peut pas être déterminée.")
                     valeur_defaut = ""
-            if key == "data_fin":
-                try:
-                    entry.insert(0, str(self.df.shape[0]))
-                except AttributeError:
-                    entry.insert(0, "")
             else:
-                entry.insert(0, str(valeur_defaut))  # Initialise avec la valeur par défaut si disponible
-            
+                valeur_defaut = data.get(key, "")
+
+            entry.insert(0, str(valeur_defaut))
             entries[key] = entry
 
-        # ✅ Check : ignorer lignes vides (coché par défaut)
+        # ✅ Check : ignorer lignes vides
         ignore_lignes_vides = tk.BooleanVar(value=True)
         frame_cb = tk.Frame(popup, bg="#f4f4f4")
         frame_cb.pack(padx=10, pady=5, anchor="w")
-        tk.Checkbutton(popup, text="Ignorer les lignes vides", variable=ignore_lignes_vides, bg="#f4f4f4").pack(side="left")
+
+        tk.Checkbutton(frame_cb, text="Ignorer les lignes vides", variable=ignore_lignes_vides, bg="#f4f4f4").pack(side="left")
+
         def reset_valeur():
             """Réinitialise les valeurs des champs à leurs valeurs par défaut."""
             for key, entry in entries.items():
-                valeur_defaut = valeurs_par_defaut.get(key, "")
                 if key == "data_fin":
                     try:
                         entry.delete(0, tk.END)
@@ -281,75 +368,82 @@ class ComparePage(tk.Frame):
                         entry.delete(0, tk.END)
                         entry.insert(0, "")
                 else:
+                    valeur_defaut = valeurs_par_defaut.get(key, "")
                     entry.delete(0, tk.END)
                     entry.insert(0, str(valeur_defaut))
 
             ignore_lignes_vides.set(True)
-            
-        tk.Button(frame_cb, text="Réinitialisation", command=reset_valeur).pack(side="left", padx=10)
 
-
-            
+        ttkb.Button(frame_cb, text="Réinitialisation", command=reset_valeur).pack(side="left", padx=10)
 
         # ⚠️ Zone de message d'erreur
         label_erreur = tk.Label(popup, text="", fg="red", bg="#f4f4f4", font=("Segoe UI", 9, "italic"))
         label_erreur.pack(pady=5)
-    
+
         # ✅ Boutons
         frame_btns = tk.Frame(popup, bg="#f4f4f4")
         frame_btns.pack(pady=10)
-    
-        def appliquer():
+
+        def appliquer_parametres():
             try:
                 valeurs = {k: int(e.get()) for k, e in entries.items()}
             except ValueError:
                 messagebox.showerror("Erreur", "Tous les champs doivent être remplis avec des entiers valides.")
                 return
-        
-            # Calcul automatique de la taille d’en-tête
+
+            # Validation
             taille_entete = valeurs["entete_fin"] - valeurs["entete_debut"] + 1
             if taille_entete <= 0:
                 messagebox.showerror("Erreur", "L'entête doit contenir au moins une ligne.")
                 return
-        
-            # Vérification des contraintes
+
             if valeurs["entete_fin"] >= valeurs["data_debut"]:
                 messagebox.showerror("Erreur", "La fin de l'entête doit être avant le début des données.")
                 return
-        
+
             if valeurs["nb_colonnes_secondaires"] >= taille_entete:
                 messagebox.showerror("Erreur", "Le nombre de colonnes secondaires doit être inférieur à la taille de l'entête.")
                 return
-        
+
             if not (valeurs["entete_debut"] <= valeurs["ligne_unite"] <= valeurs["entete_fin"]):
                 messagebox.showerror("Erreur", "La ligne d'unité doit être comprise dans l'entête.")
                 return
-        
-            # Appliquer les valeurs
-            
-        
-            # Optionnel : garder les valeurs pour un usage futur
+
+            # Appliquer
             valeurs["ignorer_lignes_vides"] = ignore_lignes_vides.get()
             self.details_structure = valeurs
+            # print("valeur :")
+            # print(valeurs)
+            # print("details_structure :")
+            # print(self.details_structure)
 
-            self.taille_entete_entry.delete(0, tk.END)
-            self.taille_entete_entry.insert(0, str(taille_entete))
+            if hasattr(self, "taille_entete_entry"):
+                self.taille_entete_entry.delete(0, tk.END)
+                self.taille_entete_entry.insert(0, str(taille_entete))
+
             popup.destroy()
 
-        tk.Button(frame_btns, text="✅ Appliquer", command=appliquer).pack(side="left", padx=10)
-        tk.Button(frame_btns, text="❌ Annuler", command=popup.destroy).pack(side="left", padx=10)
-
+        ttkb.Button(frame_btns, text="✅ Appliquer", command=appliquer_parametres).pack(side="left", padx=10)
+        ttkb.Button(frame_btns, text="❌ Annuler", command=popup.destroy).pack(side="left", padx=10)
 
 
 # Affichage du fichier Excel dans le tableau ====================================================================================================================
     def afficher_excel(self):
         """Affiche le contenu du fichier Excel dans le tableau."""
         try:
-            # Vider les anciennes données
+            self.update_excel()
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Impossible de lire le fichier : {e}")
+        self.dico_entete()
+
+    def update_excel(self):
+        """Met à jour le tableau avec le contenu du fichier Excel."""
+        try:
             self.table.delete(*self.table.get_children())
 
-            # Lire le fichier Excel
-            self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None)
+        # Lire le fichier Excel
+            self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None).copy()
+
             nb_cols = len(self.df.columns)
             col_names = [f"Col {i+1}" for i in range(nb_cols)]
 
@@ -363,15 +457,19 @@ class ComparePage(tk.Frame):
             # Remplir le tableau
             for i, row in self.df.head(50).iterrows():
                 self.table.insert("", "end", text=str(i), values=list(row))
-            self.colorier_ligne(self.details_structure["entete_debut"])
+            self.colorier_lignes_range(
+                self.details_structure["entete_debut"],
+                self.details_structure["entete_fin"])
         except Exception as e:
             messagebox.showerror("Erreur", f"Impossible de lire le fichier : {e}")
         self.dico_entete()
 
+
+
     def create_excel_preview_frame(self):
         """Crée le cadre pour l'aperçu du fichier Excel."""
         # Créer un LabelFrame
-        self.excel_preview_frame = tk.LabelFrame(self, text="3. Aperçu du fichier Excel", bg="#f4f4f4")
+        self.excel_preview_frame = ttkb.LabelFrame(self, text="3. Aperçu du fichier Excel")
         self.excel_preview_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
         # Créer le Treeview avec une colonne pour les numéros de ligne
@@ -397,7 +495,7 @@ class ComparePage(tk.Frame):
         self.table["columns"] = col_names
 
         self.table.heading("#0", text="Ligne", anchor="center")
-        self.table.column("#0", width=40, minwidth=30, anchor="center", stretch=False)
+        self.table.column("#0", width=50, minwidth=30, anchor="center", stretch=False)
         for name in col_names:
             self.table.heading(name, text=name)
             self.table.column(name, anchor="center", width=120, minwidth=100, stretch=True)
@@ -437,6 +535,7 @@ class ComparePage(tk.Frame):
         """
         Colorie toutes les lignes de ligne_debut à ligne_fin en utilisant la fonction colorier_ligne.
         """
+        # self.enlever_toutes_couleurs()
         # S'assurer que ligne_debut est inférieur ou égal à ligne_fin
         if ligne_debut > ligne_fin:
             ligne_debut, ligne_fin = ligne_fin, ligne_debut
@@ -473,6 +572,38 @@ class ComparePage(tk.Frame):
 
 
 
+# Activation/desactivation des element =========================================================================================================
+    def activation_bouton_choix_fichier(self):
+        """Active les boutons et champs liés au choix du fichier."""
+        self.taille_entete_entry.config(state="normal")
+        self.detail_btn.config(state="normal")
+
+    def activation_bouton_choix_colonne(self):
+        """Active les boutons et champs liés au choix des colonnes."""
+        self.bouton_execution.config(state="normal")
+        self.bouton_courbe.config(state="normal")
+
+    def activation_bouton_choix_courbe(self):
+        """Active le bouton pour exécuter les tests statistiques."""
+        self.btn_ok.config(state="normal")
+
+    def desactivation_bouton(self):
+        """Désactive tous les boutons et champs liés au choix du fichier, des colonnes et des courbes."""
+        #entete
+        self.taille_entete_entry.config(state="disabled")
+        self.detail_btn.config(state="disabled")
+
+        self.bouton_execution.config(state="disabled")
+        self.bouton_courbe.config(state="disabled")
+
+    def desactivation_bouton_choix_colonne(self):
+        """Désactive les boutons et champs liés au choix des colonnes."""
+        self.bouton_execution.config(state="disabled")
+        self.bouton_courbe.config(state="disabled")
+
+    def desactivation_bouton_choix_courbe(self):
+        """Désactive le bouton pour exécuter les tests statistiques."""
+        self.btn_ok.config(state="disabled")
 
 
 # SELECTION TESTS ====================================================================================================================
@@ -481,7 +612,7 @@ class ComparePage(tk.Frame):
         # Choix de la thématique
         tk.Label(self.test_frame, text="Type de test :").pack(side="left", padx=(5, 0))
         self.theme_var = tk.StringVar(value="Normalité")
-        themes = ["Normalité", "Homogénéité des variances", "Comparaison de groupes", "Moyennes hebdomadaires"]
+        themes = ["Normalité", "Homogénéité des variances", "Comparaison de groupes", "Moyennes hebdomadaires","Autre"]
         self.theme_combo = ttk.Combobox(self.test_frame, values=themes, textvariable=self.theme_var, state="readonly", width=25)
         self.theme_combo.pack(side="left", padx=5)
         self.theme_combo.bind("<<ComboboxSelected>>", self.update_test_options)
@@ -504,6 +635,7 @@ class ComparePage(tk.Frame):
 
         self.col_var_label = tk.Label(self.grid_frame, text="Variable :", bg="#f4f4f4")
         self.var_selection = Selection_col(self.dico_structure)
+        self.var_selection.action_selection = self.on_colonne_change
         self.col_var = self.var_selection.get_frame_selection_grid( self.grid_frame,0,1)
 
         self.col_groupe_label = tk.Label(self.grid_frame, text="Groupe :", bg="#f4f4f4")
@@ -514,10 +646,13 @@ class ComparePage(tk.Frame):
         # le dictionnaire correspond aux valeurs différentes de la colonne col_groupe
         self.col_groupe1_label = tk.Label(self.grid_frame, text="Groupe 1 :", bg="#f4f4f4")
         self.groupe1_selection = Selection_col(self.dico_groupe)
+        self.groupe1_selection.action_selection = self.on_colonne_change
         self.col_groupe1 = self.groupe1_selection.get_frame_selection_grid( self.grid_frame,0,5)
+
 
         self.col_groupe2_label = tk.Label(self.grid_frame, text="Groupe 2 :", bg="#f4f4f4")
         self.groupe2_selection = Selection_col(self.dico_groupe)
+        self.groupe2_selection.action_selection = self.on_colonne_change
         self.col_groupe2 = self.groupe2_selection.get_frame_selection_grid( self.grid_frame,1,5)
 
         # Disposition en 2 lignes
@@ -534,8 +669,10 @@ class ComparePage(tk.Frame):
         # self.col_groupe2.grid(row=1, column=3, padx=5, pady=2)
 
         # Bouton d'exécution
-        tk.Button(self.test_frame, text="Exécuter le test", command=self.executer_test_general).pack(side="left", padx=10)
-        tk.Button(self.test_frame, text="afficher courbe variable", command=self.afficher_courbe_popup).pack(side="left", padx=10)
+        self.bouton_execution = ttkb.Button(self.test_frame, text="Exécuter le test", command=self.executer_test_general)
+        self.bouton_execution.pack(side="left", padx=10)
+        self.bouton_courbe =ttkb.Button(self.test_frame, text="afficher courbe variable", command=self.afficher_courbe_popup)
+        self.bouton_courbe.pack(side="left", padx=10)
 
 
         self.update_test_options()
@@ -545,24 +682,27 @@ class ComparePage(tk.Frame):
         theme = self.theme_var.get()
 
         if theme == "Normalité":
-            options = ["shapiro", "dagostino", "anderson"]
+            options = ["Shapiro", "Dagostino", "Anderson"]
             self.hide_conditional_fields()
 
         elif theme == "Homogénéité des variances":
-            options = ["levene", "bartlett"]
+            options = ["Levene", "Bartlett"]
             self.show_conditional_fields(show_groupes=False)
 
         elif theme == "Comparaison de groupes":
-            options = ["student", "mannwhitney"]
+            options = ["Student", "Mannwhitney"]
             self.show_conditional_fields(show_groupes=True)
 
         elif theme == "Moyennes hebdomadaires":
-            options = ["student", "mannwhitney"]
+            options = ["Student", "Mannwhitney"]
             self.show_conditional_fields(show_groupes=True)
-
+        elif theme == "Autre":
+            options = ["Moyenne", "Mediane", "Variance", "Ecart-type"]
+            self.hide_conditional_fields()
         else:
             options = []
             self.hide_conditional_fields()
+        self.on_colonne_change()
 
         self.test_combo["values"] = options
         self.test_combo.set(options[0] if options else "")
@@ -572,29 +712,32 @@ class ComparePage(tk.Frame):
         selected_method = self.test_method_var.get()
         self.append_text(f"Méthode sélectionnée : {selected_method}", color="blue")
         dico_methode_contrainte = {
-            "shapiro": "✅ Taille de l’échantillon : 3 ≤ n ≤ 2000\n"
+            "Shapiro": "✅ Taille de l’échantillon : 3 ≤ n ≤ 2000\n"
             "              ✅ Données quantitatives continues.\n",
 
-            "dagostino": "✅ Taille de l’échantillon : n ≥ 20.\n"
+            "Dagostino": "✅ Taille de l’échantillon : n ≥ 20.\n"
             "              ✅ Données quantitatives continues.\n",
 
-            "anderson": "✅ Aucune limite stricte sur n, mais plus précis pour n ≥ 50.\n"
+            "Anderson": "✅ Aucune limite stricte sur n, mais plus précis pour n ≥ 50.\n"
             "              ✅ Données quantitatives continues.\n",
 
-            "levene": "✅ Pas de normalité requise.\n"
+            "Levene": "✅ Pas de normalité requise.\n"
             "              ✅ Groupes indépendants.\n",
 
-            "bartlett": "✅ Les données doivent être normales.\n"
+            "Bartlett": "✅ Les données doivent être normales.\n"
             "              ✅ Groupes indépendants.\n",
 
-            "student": "✅ Données normales dans chaque groupe.\n"
+            "Student": "✅ Données normales dans chaque groupe.\n"
             "              ✅ Homogénéité des variances.\n"
             "              ✅ Groupes indépendants ou appariés.\n",
-            "mannwhitney": "✅ Aucune condition de normalité requise.\n"
+            "Mannwhitney": "✅ Aucune condition de normalité requise.\n"
             "              ✅ Données ordinales ou continues.\n"
             "              ✅ Groupes indépendants.\n"
         }
-        self.append_text(f"Contraintes : {dico_methode_contrainte[selected_method]}", color="red")
+        if selected_method  in dico_methode_contrainte:
+            self.append_text(f"Contraintes : {dico_methode_contrainte[selected_method]}", color="red")
+        # self.update_test_options()
+
 
     def show_conditional_fields(self, show_groupes=False):
         """ Affiche les champs conditionnels en fonction du thème sélectionné."""
@@ -622,16 +765,45 @@ class ComparePage(tk.Frame):
             self.col_groupe1_label, self.groupe1_selection,
             self.col_groupe2_label, self.groupe2_selection
         ]:
-            # self.col_var_label, self.var_selection,
             widget.grid_remove()
-
+    
     def maj_selection_colonne(self):
         """ Met à jour les sélections de colonnes en fonction de la structure actuelle."""
+        # self.update_test_options()
         self.dico_colonne_groupe()
         self.var_selection.maj_donnees(self.dico_structure)
         self.groupe_selection.maj_donnees(self.dico_structure)
         self.groupe1_selection.maj_donnees(self.dico_groupe)
         self.groupe2_selection.maj_donnees(self.dico_groupe)
+        self.on_colonne_change()      
+        
+
+
+    def on_colonne_change(self):
+        """ Gère le changement de colonne sélectionnée."""
+        theme = self.theme_var.get()
+        if self.var_selection.chemin !="":
+            self.activation_bouton_choix_colonne()
+
+            if theme == "Homogénéité des variances" :
+                if self.groupe_selection.chemin!="":
+                    self.activation_bouton_choix_colonne()
+                else:
+                    self.desactivation_bouton_choix_colonne()
+
+            elif (theme =="Comparaison de groupes" or theme == "Moyennes hebdomadaires")  :
+                print("Comparaison de groupes ou Moyennes hebdomadaires")
+                if self.groupe_selection.chemin!="":    
+                    if self.groupe1_selection.chemin!="" and self.groupe2_selection.chemin!="":
+                        self.activation_bouton_choix_colonne()
+                    else:
+                        self.desactivation_bouton_choix_colonne()
+
+                else:
+                    self.desactivation_bouton_choix_colonne()
+        else:            
+            self.desactivation_bouton_choix_colonne()
+
 
     def dico_colonne_groupe(self):
         """ Construit un dictionnaire des groupes à partir de la colonne sélectionnée."""
@@ -647,13 +819,44 @@ class ComparePage(tk.Frame):
             messagebox.showerror("Erreur", f"Colonne '{chemin_colonne}' non trouvée dans la feuille.")
             return
 
-        for idx in range(self.comparateur.feuille.debut_data, self.comparateur.feuille.nb_ligne):
-            data = self.df.iloc[idx, indice_colonne]
-            if pd.isna(data):
-                continue
-            data = str(data)
-            if data not in self.dico_groupe:
-                self.dico_groupe[data] = {}  
+        for idx in range(self.comparateur.feuille.debut_data, self.comparateur.feuille.fin_data):
+            try:
+                data = self.df.iloc[idx, indice_colonne]
+                if pd.isna(data):
+                    continue
+                data = str(data)
+                if data not in self.dico_groupe:
+                    self.dico_groupe[data] = {}  
+            except IndexError:
+                messagebox.showerror("Erreur", f"Index {idx} hors des limites pour la colonne {chemin_colonne}.")
+                print(f"Index {idx} hors des limites pour la colonne {chemin_colonne}/{indice_colonne}.")
+                return
+
+    def reset_combo(self):
+        """ Réinitialise les combobox de sélection de colonne."""
+        self.var_selection = Selection_col(self.dico_structure)
+        self.var_selection.action_selection = self.on_colonne_change
+        self.col_var = self.var_selection.get_frame_selection_grid( self.grid_frame,0,1)
+
+
+        self.groupe_selection = Selection_col(self.dico_structure)
+        self.groupe_selection.action_selection = self.maj_selection_colonne
+        self.col_groupe = self.groupe_selection.get_frame_selection_grid( self.grid_frame,0,3)
+
+        self.groupe1_selection = Selection_col(self.dico_groupe)
+        self.groupe1_selection.action_selection = self.on_colonne_change
+        self.col_groupe1 = self.groupe1_selection.get_frame_selection_grid( self.grid_frame,0,5)
+
+
+
+
+        self.groupe2_selection = Selection_col(self.dico_groupe)
+        self.groupe2_selection.action_selection = self.on_colonne_change
+        self.col_groupe2 = self.groupe2_selection.get_frame_selection_grid( self.grid_frame,1,5)
+
+
+
+        self.hide_conditional_fields()
 
 
     # Tracer des courbes 
@@ -697,12 +900,7 @@ class ComparePage(tk.Frame):
         for nom, _ in self.fonctions_courbes:
             listbox.insert(tk.END, nom)
         listbox.pack(fill="both", expand=True, padx=10, pady=5)
-
-        # Appel pour créer la partie de sélection de colonnes
-        
-        
-
-
+        listbox.bind('<<ListboxSelect>>', self.on_listbox_select)
         # Bouton pour tracer la courbe
         def valider():
             selection_courbe = listbox.curselection()
@@ -718,11 +916,41 @@ class ComparePage(tk.Frame):
             except Exception as e:
                 messagebox.showerror("Erreur", f"Erreur lors du tracé : {e}")
 
-        btn_ok = tk.Button(popup, text="Tracer la courbe", command=valider)
-        btn_ok.pack(pady=10)
-
+        self.btn_ok = ttkb.Button(popup, text="Tracer la courbe", command=valider)
+        self.btn_ok.pack(pady=10)
+        self.desactivation_bouton_choix_courbe()
 
         self.wait_window(popup)
+
+    def plot_boxplot(self, feuille, chemin=None):
+        """ Trace un boxplot pour la colonne sélectionnée."""
+        try:
+            feuille.entete.structure = self.dico_structure
+            feuille.entete.placement_colonne = feuille.entete.set_position()
+            indice_colonne = feuille.entete.placement_colonne[chemin]
+            plot_boxplot(indice_colonne, feuille)
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors du traçage du boxplot : {e}")
+
+    def on_listbox_select(self,event):
+        """ Gère la sélection d'une courbe dans la listbox."""
+        # Récupérer l'instance de la listbox
+        widget = event.widget
+        # Obtenir l’indice de la sélection
+        selection = widget.curselection()
+        if selection:
+            index = selection[0]
+            # Récupérer la valeur sélectionnée
+            selected_value = widget.get(index)
+            # print(f"Selected: {selected_value}")
+            # Si vous avez une liste associée à la listbox
+            
+            self.activation_bouton_choix_courbe()
+
+        else:
+            self.desactivation_bouton_choix_courbe()
+
+            print("Aucune sélection")
 
 
 
@@ -730,7 +958,7 @@ class ComparePage(tk.Frame):
     def create_result_box(self):
         """ Crée la zone de résultats pour afficher les résultats des tests statistiques."""
         # Cadre pour les résultats du test
-        self.result_frame = tk.LabelFrame(self, text="4. Résultats du test", bg="#f4f4f4")
+        self.result_frame = ttkb.LabelFrame(self, text="4. Résultats du test")
         self.result_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
         # Barre de défilement verticale
@@ -828,10 +1056,8 @@ class ComparePage(tk.Frame):
 
 
 #EXECUTION DES TESTS ====================================================================================================================
-
     def executer_test_general(self):
         """ Exécute le test statistique sélectionné et affiche les résultats."""
-        
 
         theme = self.theme_var.get()
         methode = self.test_method_var.get()
@@ -841,22 +1067,34 @@ class ComparePage(tk.Frame):
             messagebox.showwarning("Aucune sélection", "Veuillez sélectionner une colonne.")
             return
         
+        if not self.var_selection.chemin in self.comparateur.feuille.entete.placement_colonne:
+            # print(self.comparateur.feuille.entete.placement_colonne)
+            messagebox.showwarning("La colonne n'appartient pas à la feuille", "Veuillez sélectionner une colonne de cette feuille.")
+            return
+
+
         if theme == "Normalité":
             resultats = self.comparateur.tester_normalite(self.var_selection.chemin, methode=methode)
             if resultats["stat"] is None:
-                self.append_text( f"Colonne {self.self.var_selection.chemin} : données insuffisantes\n")
+                self.append_text( f"Colonne {self.var_selection.chemin} : données insuffisantes\n")
             else:
                 normalite = "✅ Normale" if resultats["normal"] else "❌ Non normale"
                 stat = f"{resultats['stat']:.4f}"
                 pval = f"{resultats['p_value']:.4f}" if resultats["p_value"] is not None else "—"
                 self.append_text( f"{self.var_selection.chemin} : stat={stat}, p={pval} → {normalite}\n")
+            # print(self.var_selection.chemin)
+            # print(self.comparateur.feuille.entete.placement_colonne[self.var_selection.chemin])
+            # print(self.comparateur.feuille.nom)
+
+
+            # print(self.comparateur.feuille.df.iloc[:,self.comparateur.feuille.entete.placement_colonne[self.var_selection.chemin]]  )
 
         elif theme == "Homogénéité des variances":
             var = self.var_selection.chemin
             groupe = self.groupe_selection.chemin
+            # print(f"var:{var}")
+            # print(f"groupe:{groupe}")
 
-            i_groupe = self.comparateur.feuille.entete.placement_colonne[groupe]
-            i_var = self.comparateur.feuille.entete.placement_colonne[var]
 
 
             # print(f"i_groupe : {groupe}, i_var : {var}")
@@ -917,5 +1155,14 @@ class ComparePage(tk.Frame):
             else:
                 self.append_text(                    f"{var} (moy. hebdo) entre {res['groupe_1']} et {res['groupe_2']} ({methode}) :\n"
                     f"Stat={res['stat']:.4f}, p={res['p_value']:.4f} → {'✅ Différence significative' if res['significatif'] else '❌ Pas de différence'}\n")
+                
+        elif theme == "Autre":
+            resultats = self.comparateur.tester_autre(self.var_selection.chemin, methode=methode)
+            if resultats["error"] is  None:
+                self.append_text( f"{self.var_selection.chemin} : {methode} = {resultats[methode]}\n")
+
+            else:
+                self.append_text( f"Colonne {self.var_selection.chemin} : données insuffisantes\n")
+
 
 
