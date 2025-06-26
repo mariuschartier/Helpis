@@ -203,6 +203,7 @@ class ExcelTesterApp(ttkb.Frame):
         return self.file_frame
 
     def arrange_widgets_file_frame(self, container:tk.Frame, widgets, event=None):
+        """ Organise les widgets dans le cadre de fichier en fonction de la largeur disponible. """
         container.update_idletasks()
         width = container.winfo_width()
         widget_width = 150  # largeur minimale estimée par widget
@@ -251,6 +252,7 @@ class ExcelTesterApp(ttkb.Frame):
 
     
     def on_feuille_change(self, event=None):
+        """Met à jour le nom de la feuille et charge les données correspondantes."""
         self.feuille_nom.set(self.feuille_combo.get())
         self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None).copy()
 
@@ -799,6 +801,7 @@ class ExcelTesterApp(ttkb.Frame):
             self.table.config(width=max_width)
 
     def update_excel(self):
+        """Met à jour le tableau avec les données du fichier Excel."""
         try:
             self.table.delete(*self.table.get_children())
 
@@ -989,6 +992,7 @@ class ExcelTesterApp(ttkb.Frame):
         # texte.config(state="disabled")
 
     def action_cellule(self, event):
+        """Gère l'action à effectuer lorsqu'une cellule est cliquée."""
         # Identifier la région cliquée
         region = self.erreur_table.identify('region', event.x, event.y)
         if region == 'cell':
@@ -1011,6 +1015,7 @@ class ExcelTesterApp(ttkb.Frame):
             # Ajoutez d'autres conditions si nécessaire
 
     def on_heading_click(self, event):
+        """Gère l'action à effectuer lorsqu'un en-tête est cliqué."""
         region = self.erreur_table.identify('region', event.x, event.y)
         if region == 'heading':
             col = self.erreur_table.identify_column(event.x)
@@ -1036,12 +1041,12 @@ class ExcelTesterApp(ttkb.Frame):
                     messagebox.showinfo("Terminé", "Lignes supprimées.")
 
     def recharger_erreur_table(self):
+        """Recharge la table des erreurs en supprimant les anciennes entrées et en réaffichant les erreurs."""
         self.erreur_table.delete(*self.erreur_table.get_children())
         self.afficher_erreurs()  # fonction qui parcourt `feuille.erreurs` et les réaffiche
 
-
-
     def afficher_erreurs(self):
+        """Affiche les erreurs dans la table des erreurs."""
         self.feuille.error_all_cell_colors()
         self.df = self.feuille.df
         self.update_excel()
@@ -1070,6 +1075,9 @@ class ExcelTesterApp(ttkb.Frame):
 
 # Fonctionnalités d'initialisation et de préparation des dossiers =========================================================================================================
     def prepare_dossiers(self):
+        """Prépare les dossiers nécessaires pour le fonctionnement de l'application.
+        Crée les dossiers 'sauvegardes/sauvegardes_tests', 'sauvegardes/results' et 'sauvegardes/data'.
+        """
         # Récupère le répertoire de l'exécutable
         Path("sauvegardes/sauvegardes_tests").mkdir(parents=True,exist_ok=True)
         Path("sauvegardes/results").mkdir(parents=True,exist_ok=True)
@@ -1138,6 +1146,7 @@ class ExcelTesterApp(ttkb.Frame):
 
 # Activation/desactivation des element =========================================================================================================
     def activation_bouton(self):
+        """Active les boutons et champs nécessaires pour l'interaction."""
         self.taille_entete_entry.config(state="normal")
         self.detail_btn.config(state="normal")
 
@@ -1148,6 +1157,7 @@ class ExcelTesterApp(ttkb.Frame):
         self.btn_importer_tests.config(state="normal")
 
     def desactivation_bouton(self):
+        """Désactive les boutons et champs pour empêcher l'interaction."""
         #entete
         self.taille_entete_entry.config(state="disabled")
         self.detail_btn.config(state="disabled")

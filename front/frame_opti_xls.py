@@ -53,7 +53,7 @@ class opti_xls(ttkb.Frame):
 
         self.status_label = tk.Label(self, text="", bg="#f4f4f4", fg="green")
         self.status_label.pack(pady=5)
-        # self.create_excel_preview_frame()
+        self.create_excel_preview_frame()
     
 # Champ de chargement du fichier et de l'entete =========================================================================================================
 
@@ -105,6 +105,7 @@ class opti_xls(ttkb.Frame):
         return self.file_frame
 
     def arrange_widgets_file_frame(self, container, widgets, event=None):
+        """ Organise les widgets dans le cadre de chargement du fichier Excel en fonction de la largeur disponible."""
         container.update_idletasks()
         width = container.winfo_width()
         widget_width = 150  # largeur minimale estimée par widget
@@ -140,12 +141,13 @@ class opti_xls(ttkb.Frame):
             if filepath:
                 self.activation_bouton(filepath)
                 self.on_feuille_change()
-                
-            
+                self.afficher_excel()
+     
         except Exception as e:
             print(f"erreur lors de la lecture du fichier: {e}")
 
     def activation_bouton(self,filepath):
+        """Active les boutons et met à jour l'interface en fonction du fichier sélectionné."""
         self.fichier_path = filepath
         self.fichier_entry.delete(0, tk.END)
         self.fichier_entry.insert(0, filepath)
@@ -163,6 +165,9 @@ class opti_xls(ttkb.Frame):
             self.detail_btn.config(state="normal")
             self.taille_entete_entry.config(state="normal")
 
+            self.excel_preview_frame.pack(fill="both", expand=True, padx=10, pady=5)
+            self.table.grid(row=0, column=0, sticky="nsew")
+
 
             self.btn_convertir.config(state="disabled")
 
@@ -177,6 +182,9 @@ class opti_xls(ttkb.Frame):
             self.detail_btn.config(state="disabled")
             self.taille_entete_entry.config(state="disabled")
 
+            self.excel_preview_frame.pack_forget()
+            self.table.grid_forget()
+
         else:
             self.btn_convertir.config(state="disabled")
             self.btn_ameliorer.config(state="disabled")
@@ -185,6 +193,9 @@ class opti_xls(ttkb.Frame):
             self.btn_separation.config(state="disabled")
             self.btn_entete_une_ligne.config(state="disabled")
 
+            self.excel_preview_frame.pack_forget()
+            self.table.grid_forget()
+            
 
         if not is_xls:
             try:
@@ -215,6 +226,7 @@ class opti_xls(ttkb.Frame):
                 messagebox.showerror("Erreur", f"Impossible de lire les feuilles du fichier :\n{e}")
 
     def desactivation_bouton(self):
+        """Désactive tous les boutons et champs de saisie."""
         #entete
         self.detail_btn.config(state="disabled")
         self.taille_entete_entry.config(state="disabled")
@@ -272,11 +284,16 @@ class opti_xls(ttkb.Frame):
         )
         self.details_structure["ligne_unite"] = self.details_structure["entete_fin"]
         self.details_structure["data_debut"] = self.details_structure["entete_fin"]+1
+        self.enlever_toutes_couleurs()
 
+        self.colorier_lignes_range(
+            self.details_structure["entete_debut"],
+            self.details_structure["entete_fin"])
 
         self.dico_entete()     
 
     def on_feuille_change(self, event=None):
+        """Met à jour la feuille sélectionnée et charge les données dans un DataFrame."""
         self.feuille_nom.set(self.feuille_combo.get())
         self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None).copy()
 
@@ -471,7 +488,7 @@ class opti_xls(ttkb.Frame):
         
 # Préparation des dossiers de sauvegarde et de résultats =========================================================================================================
     def prepare_dossiers(self):
-        print('test')
+        """Prépare les dossiers nécessaires pour les sauvegardes et les résultats."""
         # Récupère le répertoire de l'exécutable
         if hasattr(sys, '_MEIPASS'):
             base_dir = Path(sys._MEIPASS)
@@ -485,7 +502,6 @@ class opti_xls(ttkb.Frame):
         (sauvegardes_dir / 'results').mkdir(parents=True, exist_ok=True)
         (sauvegardes_dir / 'data').mkdir(parents=True, exist_ok=True)
 
-        print('test2')
 # Validation de la taille de l'en-tête =========================================================================================================
     def on_key_release_int(self, event):
         """Valide l'entrée de la taille de l'en-tête pour s'assurer qu'elle est un entier positif."""
@@ -841,3 +857,166 @@ class opti_xls(ttkb.Frame):
             self.status_label.config(text="❌ Échec de la creation", fg="red")
             messagebox.showerror("Erreur", f"Erreur lors de la creation : {e}")
 
+
+
+# Affichage de l'aperçu du fichier Excel
+    def create_excel_preview_frame(self):
+        """Crée le cadre pour l'aperçu du fichier Excel."""
+        # Créer un LabelFrame
+        self.excel_preview_frame = ttkb.LabelFrame(self, text="3. Aperçu du fichier Excel")
+        self.excel_preview_frame.pack(fill="both", expand=True, padx=10, pady=5)
+
+        # Créer le Treeview avec une colonne pour les numéros de ligne
+        self.table = ttk.Treeview(self.excel_preview_frame, show="tree headings", height=15,style="Custom.Treeview")
+        self.table.grid(row=0, column=0, sticky="nsew")
+
+        # Scrollbars attachées au LabelFrame
+        scroll_y = tk.Scrollbar(self.excel_preview_frame, orient="vertical", command=self.table.yview)
+        scroll_y.grid(row=0, column=1, sticky='ns')
+        self.table.configure(yscrollcommand=scroll_y.set)
+
+        scroll_x = tk.Scrollbar(self.excel_preview_frame, orient="horizontal", command=self.table.xview)
+        scroll_x.grid(row=1, column=0, sticky='ew')
+        self.table.configure(xscrollcommand=scroll_x.set)
+
+        # Configurer la grille pour que le tableau prenne l'espace
+        self.excel_preview_frame.grid_rowconfigure(0, weight=1)
+        self.excel_preview_frame.grid_columnconfigure(0, weight=1)
+
+        # Exemple de colonnes (15 colonnes de données)
+        nb_cols = 15
+        col_names = [f"Col {i+1}" for i in range(nb_cols)]
+        self.table["columns"] = col_names
+
+        self.table.heading("#0", text="Ligne", anchor="center")
+        self.table.column("#0", width=50, minwidth=30, anchor="center", stretch=False)
+        for name in col_names:
+            self.table.heading(name, text=name)
+            self.table.column(name, anchor="center", width=120, minwidth=100, stretch=True)
+
+        # Exemple de remplissage avec numéros de ligne et valeurs fictives
+        for i in range(50):
+            values = [f"Valeur {j+1}" for j in range(nb_cols)]
+            # Insérer avec le numéro de ligne (text=) et les valeurs
+            self.table.insert("", "end", text=str(i + 1), values=values, tags=("ligne",))
+
+
+        return self.excel_preview_frame
+
+    def on_treeview_configure(self, event):
+        """Ajuste la largeur du tableau pour ne pas dépasser 800 pixels."""
+        # Limite la largeur à 800 pixels
+        max_width = 800
+        if self.table.winfo_width() > max_width:
+            self.table.config(width=max_width)
+
+    def update_excel(self):
+        """Met à jour le tableau avec les données du fichier Excel sélectionné."""
+        try:
+            self.table.delete(*self.table.get_children())
+
+        # Lire le fichier Excel
+            self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None).copy()
+
+            nb_cols = len(self.df.columns)
+            col_names = [f"Col {i+1}" for i in range(nb_cols)]
+
+            # Réinitialiser les colonnes
+            self.table["columns"] = col_names
+
+            for name in col_names:
+                self.table.heading(name, text=name)
+                self.table.column(name, anchor="center", width=120, minwidth=100, stretch=True)
+
+            # Remplir le tableau
+            for i, row in self.df.head(50).iterrows():
+                self.table.insert("", "end", text=str(i), values=list(row))
+            self.colorier_lignes_range(
+                self.details_structure["entete_debut"],
+                self.details_structure["entete_fin"])
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Impossible de lire le fichier : {e}")
+        self.dico_entete()
+        
+        
+    def afficher_excel(self):
+        """Affiche le contenu du fichier Excel dans le tableau."""
+        try:
+            # Vider les anciennes données
+            self.taille_entete_entry.delete(0, tk.END)
+            self.taille_entete_entry.insert(0, str(1))
+
+            self.update_excel()
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Impossible de lire le fichier : {e}")
+        self.dico_entete()
+
+    def append_text(self, new_content, color="black"):
+        """Ajoute du texte à la zone de résultats sans le remplacer."""
+        if not hasattr(self, "result_text"):
+            print("Erreur : 'result_text' n'a pas été initialisé.")
+            return
+        # Créer le tag uniquement s'il n'existe pas
+        if color not in self.result_text.tag_names():
+            self.result_text.tag_config(color, foreground=color)
+        # Insérer le texte avec le tag de couleur
+        self.result_text.insert("end", new_content + "\n", color)
+        self.result_text.see("end")
+
+    def colorier_ligne(self, ligne_numero, couleur="#FFFF00"):
+        """
+        Applique une couleur de fond à la ligne spécifiée.
+        :param ligne_numero: le numéro de la ligne (1-based comme dans ton exemple)
+        :param couleur: couleur en hexadécimal (par exemple, "#FF0000" pour rouge)
+        """
+        # Créer un tag avec la couleur si pas encore créé
+        tag_name = f"ligne_{ligne_numero}"
+        if not hasattr(self, 'tags_configures'):
+            self.tags_configures = set()
+        if tag_name not in self.tags_configures:
+            self.table.tag_configure(tag_name, background=couleur)
+            self.tags_configures.add(tag_name)
+
+        # Parcourir tous les items pour trouver celui avec le texte correspondant
+        for item in self.table.get_children():
+            # Vérifier si le texte (le numéro de ligne) correspond
+            if self.table.item(item, "text") == str(ligne_numero):
+                # Appliquer le tag pour colorier la ligne
+                self.table.item(item, tags=(tag_name,))
+                break
+
+    def colorier_lignes_range(self, ligne_debut, ligne_fin, couleur="#FFFF00"):
+        """
+        Colorie toutes les lignes de ligne_debut à ligne_fin en utilisant la fonction colorier_ligne.
+        """
+        # S'assurer que ligne_debut est inférieur ou égal à ligne_fin
+        if ligne_debut > ligne_fin:
+            ligne_debut, ligne_fin = ligne_fin, ligne_debut
+        for ligne_numero in range(ligne_debut, ligne_fin + 1):
+            self.colorier_ligne(ligne_numero, couleur)
+
+    def enlever_toutes_couleurs(self):
+        """
+        Enlève la coloration de toutes les lignes.
+        """
+        for item in self.table.get_children():
+            # Récupérer tous les tags
+            tags = self.table.item(item, "tags")
+            # Filtrer pour enlever tous les tags de couleur
+            tags = tuple(tag for tag in tags if not tag.startswith("ligne_"))
+            self.table.item(item, tags=tags)
+
+    def enlever_couleur_ligne(self, ligne_numero):
+        """
+        Enlève la coloration de fond appliquée à la ligne spécifiée.
+        :param ligne_numero: le numéro de la ligne (1-based comme dans ton exemple)
+        """
+        for item in self.table.get_children():
+            if self.table.item(item, "text") == str(ligne_numero):
+                # Récupérer tous les tags de cette ligne
+                tags = self.table.item(item, "tags")
+                # Supprimer le tag de coloration spécifique
+                tags = tuple(tag for tag in tags if not tag.startswith("ligne_"))
+                # Mettre à jour l'item sans ces tags
+                self.table.item(item, tags=tags)
+                break

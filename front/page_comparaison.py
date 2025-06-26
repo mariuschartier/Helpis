@@ -118,6 +118,8 @@ class ComparePage(ttkb.Frame):
         return self.file_frame
 
     def arrange_widgets_file_frame(self, container, widgets):
+        """ Organise les widgets dans le cadre de fichier en utilisant une grille dynamique.
+        """
         container.update_idletasks()
         width = container.winfo_width()
         widget_width = 150  # largeur minimale estimée par widget
@@ -164,6 +166,8 @@ class ComparePage(ttkb.Frame):
         # print(self.dico_entete())
 
     def on_feuille_change(self, event=None):
+        """ Gère le changement de feuille dans le menu déroulant.
+        """
         self.hide_conditional_fields()
         self.feuille_nom.set(self.feuille_combo.get())
         self.df = pd.read_excel(self.fichier_path, sheet_name=self.feuille_nom.get(), header=None).copy()
@@ -433,6 +437,7 @@ class ComparePage(ttkb.Frame):
         self.dico_entete()
 
     def update_excel(self):
+        """Met à jour le tableau avec le contenu du fichier Excel."""
         try:
             self.table.delete(*self.table.get_children())
 
@@ -569,17 +574,21 @@ class ComparePage(ttkb.Frame):
 
 # Activation/desactivation des element =========================================================================================================
     def activation_bouton_choix_fichier(self):
+        """Active les boutons et champs liés au choix du fichier."""
         self.taille_entete_entry.config(state="normal")
         self.detail_btn.config(state="normal")
 
     def activation_bouton_choix_colonne(self):
+        """Active les boutons et champs liés au choix des colonnes."""
         self.bouton_execution.config(state="normal")
         self.bouton_courbe.config(state="normal")
 
     def activation_bouton_choix_courbe(self):
+        """Active le bouton pour exécuter les tests statistiques."""
         self.btn_ok.config(state="normal")
 
     def desactivation_bouton(self):
+        """Désactive tous les boutons et champs liés au choix du fichier, des colonnes et des courbes."""
         #entete
         self.taille_entete_entry.config(state="disabled")
         self.detail_btn.config(state="disabled")
@@ -587,11 +596,13 @@ class ComparePage(ttkb.Frame):
         self.bouton_execution.config(state="disabled")
         self.bouton_courbe.config(state="disabled")
 
-    def desactivation_bouton_choix_colonne(self,):
+    def desactivation_bouton_choix_colonne(self):
+        """Désactive les boutons et champs liés au choix des colonnes."""
         self.bouton_execution.config(state="disabled")
         self.bouton_courbe.config(state="disabled")
 
     def desactivation_bouton_choix_courbe(self):
+        """Désactive le bouton pour exécuter les tests statistiques."""
         self.btn_ok.config(state="disabled")
 
 
@@ -769,6 +780,7 @@ class ComparePage(ttkb.Frame):
 
 
     def on_colonne_change(self):
+        """ Gère le changement de colonne sélectionnée."""
         theme = self.theme_var.get()
         if self.var_selection.chemin !="":
             self.activation_bouton_choix_colonne()
@@ -821,6 +833,7 @@ class ComparePage(ttkb.Frame):
                 return
 
     def reset_combo(self):
+        """ Réinitialise les combobox de sélection de colonne."""
         self.var_selection = Selection_col(self.dico_structure)
         self.var_selection.action_selection = self.on_colonne_change
         self.col_var = self.var_selection.get_frame_selection_grid( self.grid_frame,0,1)
@@ -920,6 +933,7 @@ class ComparePage(ttkb.Frame):
             messagebox.showerror("Erreur", f"Erreur lors du traçage du boxplot : {e}")
 
     def on_listbox_select(self,event):
+        """ Gère la sélection d'une courbe dans la listbox."""
         # Récupérer l'instance de la listbox
         widget = event.widget
         # Obtenir l’indice de la sélection

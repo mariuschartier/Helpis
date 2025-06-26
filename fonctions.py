@@ -8,6 +8,10 @@ import pandas as pd
 
 
 def to_int(val):
+    """Convertit une valeur en entier si possible, sinon retourne la valeur d'origine.
+    Args:
+        val: La valeur à convertir.
+    """
     try:
             val = int(val)
     except ValueError:
@@ -16,6 +20,8 @@ def to_int(val):
 
 
 def is_file_locked(filepath):
+    """Vérifie si un fichier est verrouillé ou utilisé par un autre processus.
+    """
     try:
         # Essayer d'ouvrir le fichier en mode écriture
         with open(filepath, 'r+'):

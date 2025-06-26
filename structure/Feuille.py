@@ -233,6 +233,9 @@ class Feuille:
         
         
     def suppression_ligne_unique(self, nb_ligne: int):
+        """
+        Supprime une ligne spécifique dans la feuille Excel.
+        """
         print(f"🔍 Suppression de la ligne {nb_ligne} dans : {self.fichier.chemin}")
 
         if nb_ligne <= 0:
@@ -268,6 +271,8 @@ class Feuille:
 
 
     def suppression_ligne_liste(self, nb_lignes: list[int]):
+        """ Supprime plusieurs lignes spécifiques dans la feuille Excel.
+        """
         print(f"🔍 Fichier : {self.fichier.chemin}")
         print(f"🗑️ Lignes à supprimer : {nb_lignes}")
 
