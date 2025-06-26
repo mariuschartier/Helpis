@@ -14,7 +14,7 @@ class MultiPageApp(ttkb.Window):
     def __init__(self):
 
         super().__init__(themename="flatly")  # ou autre thème
-        self.title("Application Multi-page - Excel Tool")
+        self.title("Helpis - Excel Tool")
         self.state('zoomed')
         self.iconbitmap('logo.ico')
         # Couleurs et style
@@ -46,11 +46,14 @@ class MultiPageApp(ttkb.Window):
         self.hide_loading()
 
     def init_pages(self):
+        """Initialise les pages de l'application."""
         self.pages["tests"] = ExcelTesterApp(self.container, controller=self)
         self.pages["convert"] = opti_xls(self.container, controller=self)
         self.pages["compare"] = ComparePage(self.container, controller=self)
 
     def afficher_page(self, nom_page):
+        """Affiche la page spécifiée et masque les autres."""
+        """Masque toutes les pages et affiche la page demandée."""
         for page in self.pages.values():
             page.pack_forget()
         if nom_page in self.pages:
@@ -59,6 +62,7 @@ class MultiPageApp(ttkb.Window):
             print(f"Erreur : page '{nom_page}' non trouvée.")
 
     def ouvrir_aide(self):
+        """Ouvre une fenêtre d'aide avec des instructions sur l'utilisation de l'application."""
         aide_popup = ttkb.Toplevel(self)
         aide_popup.title("Aide - Utilisation")
         aide_popup.geometry("600x400")
@@ -74,6 +78,9 @@ class MultiPageApp(ttkb.Window):
         texte.configure(state="disabled")
         
     def show_loading(self, message="⏳ Chargement..."):
+        """Affiche un message de chargement."""
+        """Utilisé pour indiquer que l'application est en train de charger ou d'exécuter une tâche."""
+        """Si un label de chargement existe déjà, met à jour le texte."""
         if hasattr(self, 'loading_label'):
             self.loading_label.config(text=message)
         else:
@@ -81,11 +88,15 @@ class MultiPageApp(ttkb.Window):
             self.loading_label.pack(side="top", fill="x", pady=2)
     
     def hide_loading(self):
+        """Cache le message de chargement."""
+        """Utilisé pour indiquer que l'application a terminé de charger ou d'exécuter une tâche."""
+        """Si le label de chargement existe, le détruit."""
         if hasattr(self, 'loading_label'):
             self.loading_label.destroy()
             del self.loading_label
     
     def exec_with_loading(self, func):
+        """Exécute une fonction avec un indicateur de chargement."""
         self.show_loading()
         def task():
             try:
@@ -98,9 +109,12 @@ class MultiPageApp(ttkb.Window):
         threading.Thread(target=task, daemon=True).start()
 
     def bind_button(self, action):
+        """Retourne une fonction qui exécute l'action avec un indicateur de chargement."""
+        """Utilisé pour les boutons qui nécessitent un chargement."""
         return lambda: self.exec_with_loading(action)
     
     def setup_styles(self):
+        """Configure les styles de l'application."""
         style = ttkb.Style()
         
         
@@ -219,5 +233,6 @@ class MultiPageApp(ttkb.Window):
 
 # Lancement de l'application
 if __name__ == "__main__":
+
     app = MultiPageApp()
     app.mainloop()
