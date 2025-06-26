@@ -52,11 +52,11 @@ buildOptions = {
 }
 
 setup(
-    name="MonApplication",
+    name="Helpis",
     version="1.0",
     description="Description de mon app",
     options={"build_exe": buildOptions},
-    executables=[Executable("main.py", base=base, icon="logo.ico")],
+    executables=[Executable("main.py", base=base,target_name="Helpis" ,icon="logo.ico")],
 )
 
 
